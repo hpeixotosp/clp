@@ -48,6 +48,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Andamento {
   id: number;
@@ -462,13 +463,75 @@ export default function PROADPage() {
 
           {/* Modal de Adicionar/Editar PROAD */}
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogContent className="sm:max-w-3xl">
+            <DialogContent className="sm:max-w-4xl">
               <DialogHeader>
                 <DialogTitle>{isEditing ? 'Editar PROAD' : 'Adicionar Novo PROAD'}</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4 pt-4 max-h-[80vh] overflow-y-auto pr-6">
-                  {/* Conteúdo do formulário (todo o <div grid...>) vai aqui */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              {isEditing ? (
+                // Modal de edição com duas abas
+                <Tabs defaultValue="andamento" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="andamento">Editar Andamento</TabsTrigger>
+                    <TabsTrigger value="geral">Editar Geral</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="andamento" className="space-y-4 pt-4">
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Data</label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    "w-full justify-start text-left font-normal",
+                                    !formData.dataCadastro && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {formData.dataCadastro ? format(formData.dataCadastro, "dd/MM/yyyy", { locale: ptBR }) : <span>Selecione uma data</span>}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0">
+                                <CalendarComponent
+                                  mode="single"
+                                  selected={formData.dataCadastro}
+                                  onSelect={(date) => date && handleInputChange('dataCadastro', date)}
+                                  disabled={{ after: new Date() }}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Andamento</label>
+                          <Textarea
+                            placeholder="Descreva o andamento do PROAD..."
+                            value={formData.andamento}
+                            onChange={(e) => handleInputChange('andamento', e.target.value)}
+                            rows={4}
+                          />
+                        </div>
+                        
+                        <div className="flex gap-2 justify-end pt-4">
+                          <Button type="button" variant="outline" onClick={cancelEdit}>
+                            Cancelar
+                          </Button>
+                          <Button type="submit">
+                            Atualizar Andamento
+                          </Button>
+                        </div>
+                      </div>
+                    </form>
+                  </TabsContent>
+                  
+                  <TabsContent value="geral" className="space-y-4 pt-4">
+                    <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto pr-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Número PROAD */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Número PROAD *</label>
@@ -639,48 +702,225 @@ export default function PROADPage() {
                       {isEditing ? 'Atualizar PROAD' : 'Salvar PROAD'}
                     </Button>
                   </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+                </form>
+              </TabsContent>
+            </Tabs>
+          ) : (
+            // Modal de adição
+            <form onSubmit={handleSubmit} className="space-y-4 pt-4 max-h-[80vh] overflow-y-auto pr-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Número PROAD */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Número PROAD *</label>
+                  <Input
+                    placeholder="0000"
+                    value={formData.numero}
+                    onChange={(e) => handleNumeroChange(e.target.value)}
+                    maxLength={4}
+                    className="w-24"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">Máximo 4 dígitos</p>
+                </div>
 
-          {/* Lista de PROADs em formato de Cards */}
+                {/* Ano */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Ano *</label>
+                  <Select value={formData.ano} onValueChange={(value) => handleInputChange('ano', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o ano" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {anosDisponiveis.map((ano) => (
+                        <SelectItem key={ano} value={ano}>
+                          {ano}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Setor */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Setor *</label>
+                  <Select value={formData.setor} onValueChange={(value) => handleInputChange('setor', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o setor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {setores.map((setor) => (
+                        <SelectItem key={setor} value={setor}>
+                          {setor}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Prioridade */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Prioridade *</label>
+                  <Select value={formData.prioridade} onValueChange={(value) => handleInputChange('prioridade', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a prioridade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="baixa">Baixa</SelectItem>
+                      <SelectItem value="media">Média</SelectItem>
+                      <SelectItem value="alta">Alta</SelectItem>
+                      <SelectItem value="urgente">Urgente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Situação */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Situação *</label>
+                  <Select value={formData.situacao} onValueChange={(value) => handleInputChange('situacao', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a situação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ativo">Ativo</SelectItem>
+                      <SelectItem value="concluido">Concluído</SelectItem>
+                      <SelectItem value="suspenso">Suspenso</SelectItem>
+                      <SelectItem value="cancelado">Cancelado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Responsável */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Responsável *</label>
+                  <Select value={formData.responsavel} onValueChange={(value) => handleInputChange('responsavel', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o responsável" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {responsaveis.map((responsavel) => (
+                        <SelectItem key={responsavel} value={responsavel}>
+                          {responsavel}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Assunto */}
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-medium">Assunto *</label>
+                  <Input
+                    placeholder="Descreva o assunto do PROAD..."
+                    value={formData.assunto}
+                    onChange={(e) => handleInputChange('assunto', e.target.value)}
+                    required
+                  />
+                </div>
+
+                {/* Andamento */}
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-medium">Andamento *</label>
+                  <Textarea
+                    placeholder="Descreva o andamento do PROAD..."
+                    value={formData.andamento}
+                    onChange={(e) => handleInputChange('andamento', e.target.value)}
+                    rows={3}
+                    required
+                  />
+                </div>
+
+                {/* Data de Cadastro */}
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-medium">Data de Cadastro *</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !formData.dataCadastro && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formData.dataCadastro ? format(formData.dataCadastro, "dd/MM/yyyy", { locale: ptBR }) : <span>Selecione uma data</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <CalendarComponent
+                        mode="single"
+                        selected={formData.dataCadastro}
+                        onSelect={(date) => date && handleInputChange('dataCadastro', date)}
+                        disabled={{ after: new Date() }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              <div className="flex gap-2 justify-end pt-4">
+                <Button type="button" variant="outline" onClick={cancelEdit}>
+                  Cancelar
+                </Button>
+                <Button type="submit">
+                  {isEditing ? 'Atualizar PROAD' : 'Salvar PROAD'}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Lista de PROADs em formato de Cards */}
           <div className="space-y-4">
             {filteredProads.length > 0 ? (
               filteredProads.map((proad) => (
                 <Card key={proad.id}>
                   <CardHeader>
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <CardTitle className="text-lg">PROAD {proad.numero}/{proad.ano}</CardTitle>
-                          {getPrioridadeBadge(proad.prioridade)}
-                          {getSituacaoBadge(proad.situacao)}
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <p className="font-semibold text-muted-foreground">Assunto:</p>
-                            <p className="text-foreground">{proad.assunto || "Sem assunto"}</p>
+                    <div className="flex items-start justify-between gap-6">
+                      <div className="flex-1 space-y-4">
+                        {/* Cabeçalho com número e badges */}
+                        <div className="flex items-center gap-4">
+                          <CardTitle className="text-xl font-bold">PROAD {proad.numero}/{proad.ano}</CardTitle>
+                          <div className="flex gap-2">
+                            {getPrioridadeBadge(proad.prioridade)}
+                            {getSituacaoBadge(proad.situacao)}
                           </div>
-                          <div>
-                            <p className="font-semibold text-muted-foreground">Responsável:</p>
-                            <p className="text-foreground">{proad.responsavel === 'Outro(a)' ? proad.responsavel_custom : proad.responsavel || "-"}</p>
+                        </div>
+                        
+                        {/* Informações principais em grid responsivo */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                          <div className="space-y-2">
+                            <p className="font-semibold text-muted-foreground text-sm uppercase tracking-wide">Assunto</p>
+                            <p className="text-foreground text-base">{proad.assunto || "Sem assunto"}</p>
+                          </div>
+                          <div className="space-y-2">
+                            <p className="font-semibold text-muted-foreground text-sm uppercase tracking-wide">Responsável</p>
+                            <p className="text-foreground text-base">{proad.responsavel === 'Outro(a)' ? proad.responsavel_custom : proad.responsavel || "-"}</p>
+                          </div>
+                          <div className="space-y-2">
+                            <p className="font-semibold text-muted-foreground text-sm uppercase tracking-wide">Setor</p>
+                            <p className="text-foreground text-base">{proad.setor}</p>
                           </div>
                         </div>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-muted-foreground font-semibold mb-2">Descrição do Último Andamento:</p>
-                        <p className="text-foreground">{proad.andamento || "Nenhum andamento registrado."}</p>
+                    <div className="space-y-4">
+                      {/* Andamento */}
+                      <div className="bg-muted/30 p-4 rounded-lg">
+                        <p className="text-muted-foreground font-semibold mb-2 text-sm uppercase tracking-wide">Descrição do Último Andamento</p>
+                        <p className="text-foreground text-base leading-relaxed">{proad.andamento || "Nenhum andamento registrado."}</p>
                       </div>
-                      <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <span>Setor: {proad.setor}</span>
-                        <span>Data: {format(new Date(proad.dataCadastro), "dd/MM/yyyy")}</span>
+                      
+                      {/* Informações secundárias */}
+                      <div className="flex items-center justify-between text-sm text-muted-foreground border-t pt-4">
+                        <span className="font-medium">Data de Cadastro: {format(new Date(proad.dataCadastro), "dd/MM/yyyy")}</span>
                       </div>
                     </div>
-                    <div className="flex gap-2 items-center">
+                    
+                    {/* Botões de ação */}
+                    <div className="flex gap-2 items-center justify-end mt-4 pt-4 border-t">
                       {/* Botão de Histórico */}
                       {proad.historicoAndamentos && proad.historicoAndamentos.length > 0 && (
                         <Dialog>

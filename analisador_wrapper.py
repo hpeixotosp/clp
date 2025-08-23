@@ -42,7 +42,10 @@ def executar_analisador():
             return {"error": f"Script não encontrado: {script_path}", "results": []}
         
         # Executar o script principal com os mesmos argumentos
-        cmd = ["python3", str(script_path)] + sys.argv[1:]
+        # Detectar se estamos no Vercel (ambiente de produção)
+        is_vercel = os.environ.get('VERCEL') == '1' or os.environ.get('NODE_ENV') == 'production'
+        python_cmd = "python" if is_vercel else "python3"
+        cmd = [python_cmd, str(script_path)] + sys.argv[1:]
         
         print(f"Executando: {' '.join(cmd)}")
         

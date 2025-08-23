@@ -24,9 +24,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Criar diretório temporário para os PDFs
-    const tempDir = join(process.cwd(), 'temp_pdfs');
+    const isVercel = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+    const tempDir = isVercel ? '/tmp' : join(process.cwd(), 'temp_pdfs');
     console.log(`Criando diretório temporário: ${tempDir}`);
-    await mkdir(tempDir, { recursive: true });
+    if (!isVercel) {
+      await mkdir(tempDir, { recursive: true });
+    }
 
     // Salvar PDFs temporariamente
     const savedPaths: string[] = [];
@@ -49,11 +52,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Executar script Python
-    const pythonScript = join(process.cwd(), '..', 'backend_pdf_processor.py');
+    const pythonScript = isVercel 
+      ? join(process.cwd(), 'backend_pdf_processor.py')
+      : join(process.cwd(), '..', 'backend_pdf_processor.py');
     
     console.log(`Script Python: ${pythonScript}`);
     console.log(`PDFs para processar: ${savedPaths.join(', ')}`);
-    console.log(`Diretório de trabalho: ${join(process.cwd(), '..')}`);
+    console.log(`Diretório de trabalho: ${process.cwd()}`);
 
     // Verificar se o script Python existe
     if (!existsSync(pythonScript)) {
@@ -65,8 +70,6 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      // Detectar se estamos no Vercel (ambiente de produção)
-      const isVercel = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
       const pythonCommand = isVercel ? 'python' : 'python3';
       
       // Construir comando com aspas corretas para cada arquivo
@@ -75,9 +78,10 @@ export async function POST(request: NextRequest) {
       
       console.log('Comando executado:', command);
       
+      const workingDir = isVercel ? process.cwd() : join(process.cwd(), '..');
       const { stdout, stderr } = await execAsync(
         command,
-        { cwd: join(process.cwd(), '..') }
+        { cwd: workingDir }
       );
 
       if (stderr) {
@@ -87,7 +91,9 @@ export async function POST(request: NextRequest) {
       console.log('Saída Python (stdout):', stdout);
 
       // Ler resultados do CSV gerado
-      const csvPath = join(process.cwd(), '..', 'resultados_ponto.csv');
+      const csvPath = isVercel 
+        ? join(process.cwd(), 'resultados_ponto.csv')
+        : join(process.cwd(), '..', 'resultados_ponto.csv');
       
       if (existsSync(csvPath)) {
         console.log(`CSV encontrado: ${csvPath}`);

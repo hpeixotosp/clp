@@ -163,16 +163,23 @@ export function TRAnalisarClient() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="document-type">Tipo de Documento</Label>
-                <Select value={documentType} onValueChange={(value: 'etp' | 'tr') => setDocumentType(value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="etp">Estudo Técnico Preliminar (ETP)</SelectItem>
-                    <SelectItem value="tr">Termo de Referência (TR)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="document-type" className="text-base font-semibold text-foreground">
+                  Tipo de Documento *
+                </Label>
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800 mb-2">
+                    ⚠️ <strong>IMPORTANTE:</strong> Escolha o tipo de documento antes de prosseguir
+                  </p>
+                  <Select value={documentType} onValueChange={(value: 'etp' | 'tr') => setDocumentType(value)}>
+                    <SelectTrigger className="border-blue-300 focus:border-blue-500">
+                      <SelectValue placeholder="Selecione o tipo de documento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="etp">Estudo Técnico Preliminar (ETP)</SelectItem>
+                      <SelectItem value="tr">Termo de Referência (TR)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -193,10 +200,10 @@ export function TRAnalisarClient() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Upload className="h-5 w-5" />
-                Upload de PDF
+                Escolha o Documento a ser Analisado
               </CardTitle>
               <CardDescription>
-                Faça upload do arquivo PDF para análise
+                Faça upload do arquivo PDF ou cole o texto para análise
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

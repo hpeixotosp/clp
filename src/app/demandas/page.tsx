@@ -17,6 +17,8 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { setores } from "@/lib/data";
 import { responsaveis } from "@/lib/responsaveis";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Demanda {
   id?: number;
@@ -24,7 +26,7 @@ interface Demanda {
   descricao: string;
   setor: string;
   prioridade: "alta" | "media" | "baixa";
-  situacao: "pendente" | "em_andamento" | "concluida" | "cancelada";
+  situacao: "pendente" | "emandamento" | "concluida" | "cancelada";
   dataCadastro: Date;
   prazo?: Date;
   responsavel?: string;
@@ -222,7 +224,7 @@ export default function DemandasPage() {
             Pendente
           </Badge>
         );
-      case "em_andamento":
+      case "emandamento":
         return (
           <Badge variant="default" className="flex items-center gap-1">
             <AlertCircle className="h-3 w-3" />
@@ -251,7 +253,7 @@ export default function DemandasPage() {
   // Calcular estatísticas
   const totalDemandas = demandas.length;
   const pendentes = demandas.filter(d => d.situacao === "pendente").length;
-  const emAndamento = demandas.filter(d => d.situacao === "em_andamento").length;
+  const emAndamento = demandas.filter(d => d.situacao === "emandamento").length;
   const concluidas = demandas.filter(d => d.situacao === "concluida").length;
   const altaPrioridade = demandas.filter(d => d.prioridade === "alta").length;
 
@@ -324,14 +326,260 @@ export default function DemandasPage() {
           </Card>
         </div>
 
-        {/* Formulário de Adicionar/Editar Demanda */}
-        {isAdding && (
-          <Card>
-            <CardHeader>
-              <CardTitle>{isEditing ? 'Editar Demanda' : 'Adicionar Nova Demanda'}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Modal de Adicionar/Editar Demanda */}
+        <Dialog open={isAdding} onOpenChange={setIsAdding}>
+          <DialogContent className="sm:max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>{isEditing ? 'Editar Demanda' : 'Adicionar Nova Demanda'}</DialogTitle>
+            </DialogHeader>
+            
+            {isEditing ? (
+              <Tabs defaultValue="andamento" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="andamento">Editar Andamento</TabsTrigger>
+                  <TabsTrigger value="geral">Editar Geral</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="andamento" className="space-y-4 pt-4">
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Data</label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !formData.dataCadastro && "text-muted-foreground"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {formData.dataCadastro ? (
+                                  format(formData.dataCadastro, "dd/MM/yyyy", { locale: ptBR })
+                                ) : (
+                                  <span>Selecione uma data</span>
+                                )}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar
+                                mode="single"
+                                selected={formData.dataCadastro}
+                                onSelect={(date) => handleInputChange('dataCadastro', date || new Date())}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Descrição</label>
+                        <Textarea
+                          placeholder="Descreva a demanda..."
+                          value={formData.descricao}
+                          onChange={(e) => handleInputChange('descricao', e.target.value)}
+                          rows={4}
+                        />
+                      </div>
+                      
+                      <div className="flex gap-2 justify-end pt-4">
+                        <Button type="button" variant="outline" onClick={cancelEdit}>
+                          Cancelar
+                        </Button>
+                        <Button type="submit">
+                          Atualizar Demanda
+                        </Button>
+                      </div>
+                    </div>
+                  </form>
+                </TabsContent>
+                
+                <TabsContent value="geral" className="space-y-4 pt-4">
+                  <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto pr-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Título *</label>
+                        <Input
+                          placeholder="Digite o título da demanda"
+                          value={formData.titulo}
+                          onChange={(e) => handleInputChange('titulo', e.target.value)}
+                          required
+                        />
+                      </div>
+                       
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Setor de Origem *</label>
+                        <Select value={formData.setor} onValueChange={(value) => handleInputChange('setor', value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o setor" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-60">
+                            {setores.map((setor) => (
+                              <SelectItem key={setor} value={setor}>
+                                {setor}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Descrição *</label>
+                      <Textarea
+                        placeholder="Descreva detalhadamente a demanda..."
+                        value={formData.descricao}
+                        onChange={(e) => handleInputChange('descricao', e.target.value)}
+                        rows={3}
+                        required
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Prioridade</label>
+                        <Select value={formData.prioridade} onValueChange={(value: string) => handleInputChange('prioridade', value)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="alta">Alta</SelectItem>
+                            <SelectItem value="media">Média</SelectItem>
+                            <SelectItem value="baixa">Baixa</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Situação</label>
+                        <Select value={formData.situacao} onValueChange={(value: string) => handleInputChange('situacao', value)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pendente">Pendente</SelectItem>
+                            <SelectItem value="emandamento">Em Andamento</SelectItem>
+                            <SelectItem value="concluida">Concluída</SelectItem>
+                            <SelectItem value="cancelada">Cancelada</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Responsável</label>
+                        <Select
+                          value={formData.responsavel}
+                          onValueChange={(value) => handleInputChange('responsavel', value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o responsável" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {responsaveis.map((responsavel) => (
+                              <SelectItem key={responsavel} value={responsavel}>
+                                {responsavel}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Responsável Customizado */}
+                    {showCustomResponsavel && (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Nome do Responsável *</label>
+                        <Input
+                          placeholder="Digite o nome completo"
+                          value={formData.responsavel_custom}
+                          onChange={(e) => handleInputChange('responsavel_custom', e.target.value)}
+                          className="w-full"
+                          required
+                        />
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Data de Cadastro</label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !formData.dataCadastro && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {formData.dataCadastro ? (
+                                format(formData.dataCadastro, "dd/MM/yyyy", { locale: ptBR })
+                              ) : (
+                                <span>Selecione uma data</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={formData.dataCadastro}
+                              onSelect={(date) => handleInputChange('dataCadastro', date || new Date())}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Prazo (opcional)</label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !formData.prazo && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {formData.prazo ? (
+                                format(formData.prazo, "dd/MM/yyyy", { locale: ptBR })
+                              ) : (
+                                <span>Selecione uma data</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={formData.prazo}
+                              onSelect={(date) => handleInputChange('prazo', date)}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-4">
+                      <Button type="submit" className="flex-1">
+                        Atualizar Demanda
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={cancelEdit}
+                        className="flex-1"
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            ) : (
+              // Modal de adição (formulário original)
+              <form onSubmit={handleSubmit} className="space-y-4 pt-4 max-h-[80vh] overflow-y-auto pr-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Título *</label>
@@ -394,7 +642,7 @@ export default function DemandasPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pendente">Pendente</SelectItem>
-                        <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                        <SelectItem value="emandamento">Em Andamento</SelectItem>
                         <SelectItem value="concluida">Concluída</SelectItem>
                         <SelectItem value="cancelada">Cancelada</SelectItem>
                       </SelectContent>
@@ -489,8 +737,6 @@ export default function DemandasPage() {
                           mode="single"
                           selected={formData.prazo}
                           onSelect={(date) => handleInputChange('prazo', date)}
-
-
                         />
                       </PopoverContent>
                     </Popover>
@@ -499,21 +745,21 @@ export default function DemandasPage() {
 
                 <div className="flex gap-2 pt-4">
                   <Button type="submit" className="flex-1">
-                    {isEditing ? 'Atualizar Demanda' : 'Salvar Demanda'}
+                    Salvar Demanda
                   </Button>
                   <Button 
                     type="button" 
                     variant="outline" 
-                    onClick={isEditing ? cancelEdit : () => setIsAdding(false)}
+                    onClick={() => setIsAdding(false)}
                     className="flex-1"
                   >
                     Cancelar
                   </Button>
                 </div>
               </form>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Lista de Demandas em formato de Cards */}
         <div className="space-y-4">
@@ -521,36 +767,47 @@ export default function DemandasPage() {
             demandas.map((demanda) => (
               <Card key={demanda.id}>
                 <CardHeader>
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <CardTitle className="text-lg">{demanda.titulo}</CardTitle>
-                        {getPrioridadeBadge(demanda.prioridade)}
-                        {getSituacaoBadge(demanda.situacao)}
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="font-semibold text-muted-foreground">Assunto:</p>
-                          <p className="text-foreground">{demanda.descricao}</p>
+                  <div className="flex items-start justify-between gap-6">
+                    <div className="flex-1 space-y-4">
+                      {/* Cabeçalho com título e badges */}
+                      <div className="flex items-center gap-4">
+                        <CardTitle className="text-xl font-bold">{demanda.titulo}</CardTitle>
+                        <div className="flex gap-2">
+                          {getPrioridadeBadge(demanda.prioridade)}
+                          {getSituacaoBadge(demanda.situacao)}
                         </div>
-                        <div>
-                          <p className="font-semibold text-muted-foreground">Responsável:</p>
-                          <p className="text-foreground">{demanda.responsavel === 'Outro(a)' ? demanda.responsavel_custom : demanda.responsavel || "-"}</p>
+                      </div>
+                      
+                      {/* Informações principais em grid responsivo */}
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                          <p className="font-semibold text-muted-foreground text-sm uppercase tracking-wide">Assunto</p>
+                          <p className="text-foreground text-base">{demanda.descricao || "Sem descrição"}</p>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="font-semibold text-muted-foreground text-sm uppercase tracking-wide">Responsável</p>
+                          <p className="text-foreground text-base">{demanda.responsavel === 'Outro(a)' ? demanda.responsavel_custom : demanda.responsavel || "-"}</p>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="font-semibold text-muted-foreground text-sm uppercase tracking-wide">Setor</p>
+                          <p className="text-foreground text-base">{demanda.setor}</p>
                         </div>
                       </div>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span>Setor: {demanda.setor}</span>
-                      <span>Data: {format(demanda.dataCadastro, "dd/MM/yyyy", { locale: ptBR })}</span>
+                  <div className="space-y-4">
+                    {/* Informações secundárias */}
+                    <div className="flex items-center justify-between text-sm text-muted-foreground border-t pt-4">
+                      <span className="font-medium">Data de Cadastro: {format(demanda.dataCadastro, "dd/MM/yyyy", { locale: ptBR })}</span>
                       {demanda.prazo && (
-                        <span>Prazo: {format(demanda.prazo, "dd/MM/yyyy", { locale: ptBR })}</span>
+                        <span className="font-medium">Prazo: {format(demanda.prazo, "dd/MM/yyyy", { locale: ptBR })}</span>
                       )}
                     </div>
-                    <div className="flex gap-2 items-center justify-end">
+                    
+                    {/* Botões de ação */}
+                    <div className="flex gap-2 items-center justify-end mt-4 pt-4 border-t">
                       <Button
                         variant="outline"
                         size="sm"
