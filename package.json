@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:init": "tsx src/lib/schema.ts"
+    "db:init": "tsx src/lib/schema.ts",
+    "export": "next export"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",

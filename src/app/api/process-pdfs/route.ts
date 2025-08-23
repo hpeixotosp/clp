@@ -21,9 +21,8 @@ export async function POST(request: NextRequest) {
   try {
     console.log('=== INICIANDO PROCESSAMENTO DE PDFs ===');
     
-    // Usar 'python3' no Vercel, 'python3' localmente
-    const isVercel = process.env.VERCEL === '1';
-    const pythonCommand = isVercel ? 'python3' : 'python3';
+    // Usar 'python3' sempre
+    const pythonCommand = 'python3';
 
     const formData = await request.formData();
     const files = formData.getAll('files') as File[];

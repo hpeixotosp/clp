@@ -44,9 +44,8 @@ export async function POST(request: NextRequest) {
     // Construir comando Python usando wrapper robusto
     const scriptPath = path.join(process.cwd(), 'analisador_tr_wrapper.py');
     
-    // Usar 'python3' no Vercel, 'python3' localmente
-    const isVercel = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-    const pythonCommand = isVercel ? 'python3' : 'python3';
+    // Usar 'python3' sempre
+    const pythonCommand = 'python3';
     
     let command = `${pythonCommand} "${scriptPath}" --type ${documentType}`;
     

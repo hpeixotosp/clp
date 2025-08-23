@@ -1,7 +1,0 @@
-{
-  "env": {
-    "GOOGLE_AI_API_KEY": "AIzaSyDXAgbYdfGX_LhSAwljKoWeerzWHGgQC3I"
-  },
-  "buildCommand": "npm run build",
-  "installCommand": "npm install && pip install -r requirements.txt"
-}

@@ -28,9 +28,8 @@ export async function POST(request: NextRequest) {
         console.log('Wrapper exists:', await fs.access(pythonWrapper).then(() => true).catch(() => false));
         let command: string;
 
-        // Detectar se estamos no Vercel (ambiente de produção)
-        const isVercel = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-        const pythonCommand = isVercel ? 'python3' : 'python3';
+        // Usar 'python3' sempre
+        const pythonCommand = 'python3';
         
         if (mode === 'identify_items') {
             command = `${pythonCommand} "${pythonWrapper}" --mode identify_items --tr "${trPath}"`;

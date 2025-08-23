@@ -16,8 +16,8 @@ def main():
     if hasattr(sys.stderr, 'reconfigure'):
         sys.stderr.reconfigure(encoding='utf-8')
     
-    # Verificar se estamos no Vercel
-    is_vercel = os.environ.get('VERCEL') == '1'
+    # Verificar se estamos em produção
+    is_production = os.environ.get('NODE_ENV') == 'production'
     
     # Testar comandos Python disponíveis
     python_cmds = ['python3', 'python', '/usr/bin/python3', '/usr/bin/python']
