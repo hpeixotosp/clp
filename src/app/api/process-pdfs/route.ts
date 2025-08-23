@@ -65,9 +65,13 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+      // Detectar se estamos no Vercel (ambiente de produção)
+      const isVercel = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+      const pythonCommand = isVercel ? 'python' : 'python3';
+      
       // Construir comando com aspas corretas para cada arquivo
       const quotedPaths = savedPaths.map(path => `"${path}"`).join(' ');
-      const command = `python "${pythonScript}" --pdfs ${quotedPaths}`;
+      const command = `${pythonCommand} "${pythonScript}" --pdfs ${quotedPaths}`;
       
       console.log('Comando executado:', command);
       

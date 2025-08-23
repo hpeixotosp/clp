@@ -650,29 +650,35 @@ export default function PROADPage() {
                 <Card key={proad.id}>
                   <CardHeader>
                     <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <CardTitle className="text-lg">PROAD {proad.numero}/{proad.ano}</CardTitle>
-                        <p className="text-sm text-muted-foreground">{proad.assunto || "Sem assunto"}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getPrioridadeBadge(proad.prioridade)}
-                        {getSituacaoBadge(proad.situacao)}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <CardTitle className="text-lg">PROAD {proad.numero}/{proad.ano}</CardTitle>
+                          {getPrioridadeBadge(proad.prioridade)}
+                          {getSituacaoBadge(proad.situacao)}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <p className="font-semibold text-muted-foreground">Assunto:</p>
+                            <p className="text-foreground">{proad.assunto || "Sem assunto"}</p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-muted-foreground">Responsável:</p>
+                            <p className="text-foreground">{proad.responsavel === 'Outro(a)' ? proad.responsavel_custom : proad.responsavel || "-"}</p>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <p className="text-muted-foreground font-semibold mb-2">Último Andamento:</p>
-                      <p>{proad.andamento || "Nenhum andamento registrado."}</p>
-                    </div>
-                  </CardContent>
-                  <div className="flex items-center justify-between p-6 pt-4 text-sm text-muted-foreground">
-                    <div>
-                      <span>Responsável: {proad.responsavel === 'Outro(a)' ? proad.responsavel_custom : proad.responsavel || "-"}</span>
-                      <span className="mx-2">•</span>
-                      <span>{proad.setor}</span>
-                      <span className="mx-2">•</span>
-                      <span>{format(new Date(proad.dataCadastro), "dd/MM/yyyy")}</span>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-muted-foreground font-semibold mb-2">Descrição do Último Andamento:</p>
+                        <p className="text-foreground">{proad.andamento || "Nenhum andamento registrado."}</p>
+                      </div>
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <span>Setor: {proad.setor}</span>
+                        <span>Data: {format(new Date(proad.dataCadastro), "dd/MM/yyyy")}</span>
+                      </div>
                     </div>
                     <div className="flex gap-2 items-center">
                       {/* Botão de Histórico */}
@@ -801,7 +807,7 @@ export default function PROADPage() {
                         <TooltipContent><p>Excluir PROAD</p></TooltipContent>
                       </Tooltip>
                     </div>
-                  </div>
+                  </CardContent>
                 </Card>
               ))
             ) : (

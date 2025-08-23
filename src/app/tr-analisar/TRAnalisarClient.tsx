@@ -275,6 +275,16 @@ export function TRAnalisarClient() {
           </Card>
 
           {/* Botão de Análise */}
+          {/* Progresso da Análise */}
+          {isAnalyzing && (
+            <div className="space-y-3 mb-4">
+              <Progress value={analysisProgress} className="w-full" />
+              <p className="text-sm text-muted-foreground text-center">
+                {analysisProgress}% - Analisando {documentType === 'tr' ? 'Termo de Referência' : 'Estudo Técnico Preliminar'}...
+              </p>
+            </div>
+          )}
+          
           <div className="flex justify-center">
             <Button 
               onClick={handleAnalyze} 
@@ -296,26 +306,6 @@ export function TRAnalisarClient() {
             </Button>
           </div>
 
-          {/* Progresso da Análise */}
-          {isAnalyzing && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Análise em Andamento
-                </CardTitle>
-                <CardDescription>
-                  Processando documento e gerando análise técnica...
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Progress value={analysisProgress} className="w-full" />
-                <p className="text-sm text-muted-foreground text-center">
-                  {analysisProgress}% - Analisando {documentType === 'tr' ? 'Termo de Referência' : 'Estudo Técnico Preliminar'}...
-                </p>
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         {/* Coluna Direita: Resultados */}

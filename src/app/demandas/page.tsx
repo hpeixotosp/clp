@@ -515,80 +515,71 @@ export default function DemandasPage() {
           </Card>
         )}
 
-        {/* Tabela de Demandas */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Lista de Demandas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Título</TableHead>
-                    <TableHead>Setor</TableHead>
-                    <TableHead>Prioridade</TableHead>
-                    <TableHead>Situação</TableHead>
-                    <TableHead>Responsável</TableHead>
-                    <TableHead>Data Cadastro</TableHead>
-                    <TableHead>Prazo</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {demandas.map((demanda) => (
-                    <TableRow key={demanda.id}>
-                      <TableCell className="font-medium max-w-xs">
+        {/* Lista de Demandas em formato de Cards */}
+        <div className="space-y-4">
+          {demandas.length > 0 ? (
+            demandas.map((demanda) => (
+              <Card key={demanda.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <CardTitle className="text-lg">{demanda.titulo}</CardTitle>
+                        {getPrioridadeBadge(demanda.prioridade)}
+                        {getSituacaoBadge(demanda.situacao)}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
-                          <div className="font-semibold">{demanda.titulo}</div>
-                          <div className="text-sm text-muted-foreground line-clamp-2">
-                            {demanda.descricao}
-                          </div>
+                          <p className="font-semibold text-muted-foreground">Assunto:</p>
+                          <p className="text-foreground">{demanda.descricao}</p>
                         </div>
-                      </TableCell>
-                      <TableCell>{demanda.setor}</TableCell>
-                      <TableCell>{getPrioridadeBadge(demanda.prioridade)}</TableCell>
-                      <TableCell>{getSituacaoBadge(demanda.situacao)}</TableCell>
-                      <TableCell>
-                        {demanda.responsavel === 'Outro(a)' ? demanda.responsavel_custom : demanda.responsavel || "-"}
-                      </TableCell>
-                      <TableCell>
-                        {format(demanda.dataCadastro, "dd/MM/yyyy", { locale: ptBR })}
-                      </TableCell>
-                      <TableCell>
-                        {demanda.prazo ? (
-                          format(demanda.prazo, "dd/MM/yyyy", { locale: ptBR })
-                        ) : (
-                          "-"
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(demanda)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(demanda.id!)}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        <div>
+                          <p className="font-semibold text-muted-foreground">Responsável:</p>
+                          <p className="text-foreground">{demanda.responsavel === 'Outro(a)' ? demanda.responsavel_custom : demanda.responsavel || "-"}</p>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>Setor: {demanda.setor}</span>
+                      <span>Data: {format(demanda.dataCadastro, "dd/MM/yyyy", { locale: ptBR })}</span>
+                      {demanda.prazo && (
+                        <span>Prazo: {format(demanda.prazo, "dd/MM/yyyy", { locale: ptBR })}</span>
+                      )}
+                    </div>
+                    <div className="flex gap-2 items-center justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(demanda)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(demanda.id!)}
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                <p>{demandas.length === 0 ? "Nenhuma demanda cadastrada ainda." : "Nenhuma demanda encontrada com os filtros aplicados."}</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </DashboardLayout>
   );

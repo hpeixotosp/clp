@@ -543,7 +543,7 @@ export default function TICPage() {
                 ) : (
                   <>
                     <FileText className="h-5 w-5 mr-2" />
-                    Processar PDFs
+                    Processar Ponto(s)
                   </>
                 )}
               </Button>
@@ -854,7 +854,7 @@ function ContrachequeTab() {
                   ) : (
                     <>
                       <FileText className="h-5 w-5 mr-2" />
-                      Processar PDFs
+                      Processar Ponto(s)
                     </>
                   )}
                 </Button>

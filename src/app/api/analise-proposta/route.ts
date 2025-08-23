@@ -26,8 +26,12 @@ export async function POST(request: NextRequest) {
         const pythonScript = path.resolve(process.cwd(), '..', 'analisador_proposta.py');
         let command: string;
 
+        // Detectar se estamos no Vercel (ambiente de produção)
+        const isVercel = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+        const pythonCommand = isVercel ? 'python' : 'python3';
+        
         if (mode === 'identify_items') {
-            command = `python3 "${pythonScript}" --mode identify_items --tr "${trPath}"`;
+            command = `${pythonCommand} "${pythonScript}" --mode identify_items --tr "${trPath}"`;
         } else if (mode === 'analyze_item') {
             const proposalFiles = formData.getAll('proposalFiles') as File[];
             const itemName = formData.get('itemName') as string;
@@ -49,7 +53,7 @@ export async function POST(request: NextRequest) {
             }
             
             const proposalArgs = proposalPaths.map(p => `"--proposal" "${p}"`).join(' ');
-            command = `python3 "${pythonScript}" --mode analyze_item --tr "${trPath}" --item_name "${itemName}" ${proposalArgs}`;
+            command = `${pythonCommand} "${pythonScript}" --mode analyze_item --tr "${trPath}" --item_name "${itemName}" ${proposalArgs}`;
         } else {
             return NextResponse.json({ error: 'Modo de operação inválido' }, { status: 400 });
         }
