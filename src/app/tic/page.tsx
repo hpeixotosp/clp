@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { 
   Upload, 
   FileText, 
@@ -45,6 +48,7 @@ export default function TICPage() {
     processedFiles: 0,
     failedFiles: 0
   });
+  const [analysisProgress, setAnalysisProgress] = useState(0);
 
   // Carregar dados salvos do banco ao montar o componente
   useEffect(() => {
@@ -95,11 +99,23 @@ export default function TICPage() {
 
     setIsProcessing(true);
     setError(null);
+    setAnalysisProgress(0);
     setProcessingStats({
       totalFiles: selectedFiles.length,
       processedFiles: 0,
       failedFiles: 0
     });
+    
+    // Simular progresso da análise
+    const progressInterval = setInterval(() => {
+      setAnalysisProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90;
+        }
+        return prev + 10;
+      });
+    }, 500);
 
     try {
       const formData = new FormData();
@@ -122,6 +138,7 @@ export default function TICPage() {
       
       if (data.success) {
         console.log('✅ Resultados recebidos do Python:', data);
+        setAnalysisProgress(100); // Definir progresso como 100% quando concluído
         
         // Converter resultados do CSV para o formato esperado
         const processedResults = data.results
@@ -179,8 +196,10 @@ export default function TICPage() {
         failedFiles: selectedFiles.length
       }));
     } finally {
+      clearInterval(progressInterval);
       setIsProcessing(false);
       setSelectedFiles([]);
+      setTimeout(() => setAnalysisProgress(0), 1000); // Resetar progresso após um atraso
     }
   };
 
@@ -269,14 +288,22 @@ export default function TICPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header com Título e Botões de Ação */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Resultados da Análise</h1>
-            <p className="text-muted-foreground mt-1">
-              {totalProcessed} arquivo(s) processado(s) com sucesso
-            </p>
-          </div>
+        {/* Tabs para Frequência e Contracheque */}
+        <Tabs defaultValue="frequencia" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="frequencia">Frequência</TabsTrigger>
+            <TabsTrigger value="contracheque">Contracheque</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="frequencia" className="space-y-4">
+            {/* Header com Título e Botões de Ação */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold">Controle de Frequência</h1>
+                <p className="text-muted-foreground mt-1">
+                  {totalProcessed} arquivo(s) processado(s) com sucesso
+                </p>
+              </div>
           
           <div className="flex gap-2">
             <Button 
@@ -529,10 +556,16 @@ export default function TICPage() {
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span className="font-medium">Processando via Python...</span>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  Total: {processingStats.totalFiles} | 
-                  Processados: {processingStats.processedFiles} | 
-                  Falharam: {processingStats.failedFiles}
+                <div className="space-y-4">
+                  <Progress value={analysisProgress} className="w-full" />
+                  <p className="text-sm text-muted-foreground text-center">
+                    {analysisProgress}% - Processando folhas de ponto...
+                  </p>
+                  <div className="text-sm text-muted-foreground">
+                    Total: {processingStats.totalFiles} | 
+                    Processados: {processingStats.processedFiles} | 
+                    Falharam: {processingStats.failedFiles}
+                  </div>
                 </div>
               </div>
             )}
@@ -625,7 +658,274 @@ export default function TICPage() {
             </CardContent>
           </Card>
         )}
+            </TabsContent>
+
+            <TabsContent value="contracheque" className="space-y-4">
+              <ContrachequeTab />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+// Componente separado para a aba Contracheque
+function ContrachequeTab() {
+  const [files, setFiles] = useState<File[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [results, setResults] = useState<Array<{
+    colaborador: string;
+    mesReferencia: string;
+    status: string;
+    detalhes: string;
+  }>>([]);
+  const [currentStep, setCurrentStep] = useState<'upload' | 'processing' | 'results'>('upload');
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(event.target.files || []);
+    setFiles(prev => [...prev, ...selectedFiles]);
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const droppedFiles = Array.from(event.dataTransfer.files);
+    setFiles(prev => [...prev, ...droppedFiles]);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const clearAllFiles = () => {
+    setFiles([]);
+  };
+
+  const processFiles = async () => {
+    if (files.length < 2) return;
+
+    setIsProcessing(true);
+    setCurrentStep('processing');
+
+    try {
+      const formData = new FormData();
+      files.forEach(file => formData.append('files', file));
+
+      const response = await fetch('/api/contracheque/process', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setResults(data.results || []);
+        setCurrentStep('results');
+      } else {
+        console.error('Erro ao processar arquivos');
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const clearResults = () => {
+    setFiles([]);
+    setResults([]);
+    setCurrentStep('upload');
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header com Título e Botões de Ação */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Validação de Pagamento</h1>
+          <p className="text-muted-foreground mt-1">
+            Validação automatizada de contracheques e recibos de pagamento
+          </p>
+        </div>
+        
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={clearResults}
+            className="flex items-center gap-2 text-orange-600 hover:text-orange-700"
+          >
+            <Trash2 className="h-4 w-4" />
+            Limpar Tudo
+          </Button>
+        </div>
       </div>
-    </DashboardLayout>
+
+      {/* Upload de Arquivos */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Upload de PDFs de Contracheque e Recibo</CardTitle>
+          <CardDescription>
+            Selecione arquivos PDF de contracheque e recibos para validação automática
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {currentStep === 'upload' && (
+            <>
+              {/* Área de Upload Melhorada */}
+              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-muted-foreground/50 transition-colors">
+                <Input
+                  type="file"
+                  multiple
+                  accept=".pdf"
+                  onChange={handleFileUpload}
+                  disabled={isProcessing}
+                  className="hidden"
+                  id="contracheque-file-upload"
+                />
+                <label htmlFor="contracheque-file-upload" className="cursor-pointer">
+                  <div className="flex flex-col items-center gap-2">
+                    <Upload className="h-8 w-8 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">
+                        Clique para selecionar PDFs ou arraste e solte
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Selecione pelo menos 2 arquivos: contracheque e recibo correspondente
+                      </p>
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              {/* Lista de Arquivos Selecionados */}
+              {files.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">Arquivos selecionados ({files.length})</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={clearAllFiles}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Limpar Todos
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {files.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-blue-600" />
+                          <span className="text-sm font-medium">{file.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(index)}
+                          className="text-red-600 hover:text-red-700 h-6 w-6 p-0"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Botão Processar */}
+              <div className="flex justify-center">
+                <Button
+                  onClick={processFiles}
+                  disabled={files.length < 2 || isProcessing}
+                  className="min-w-[200px] h-12 text-lg"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-5 w-5 mr-2" />
+                      Processar PDFs
+                    </>
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
+
+          {/* Estado de Processamento */}
+          {currentStep === 'processing' && (
+            <div className="bg-muted p-4 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="font-medium">Processando via Python...</span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Validando contracheques e recibos...
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Tabela de Resultados */}
+      {currentStep === 'results' && results.length > 0 && (
+        <Card>
+          <CardContent className="p-0">
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Colaborador</TableHead>
+                    <TableHead>Mês de Referência</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Detalhes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {results.map((result, index) => (
+                    <TableRow key={index} className="hover:bg-muted/50">
+                      <TableCell className="font-medium">{result.colaborador}</TableCell>
+                      <TableCell>{result.mesReferencia}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={result.status === 'Confere' ? 'default' : 'destructive'}
+                          className="font-mono text-sm px-3 py-1"
+                        >
+                          {result.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{result.detalhes}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Mensagem inicial */}
+      {results.length === 0 && !isProcessing && currentStep === 'upload' && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">Aguardando PDFs para validação</h3>
+            <p className="text-muted-foreground">
+              Selecione arquivos PDF de contracheque e recibo para iniciar a validação
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
