@@ -50,11 +50,11 @@ export default function Dashboard() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header com a imagem anexa */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-700 p-6 text-white flex items-center justify-center">
+        <div className="relative overflow-hidden rounded-xl p-6 text-white flex items-center justify-center" style={{ backgroundColor: '#000000' }}>
           <img 
             src="/images/trt21-clp-header.png" 
             alt="TRT21 - CLP Header" 
-            className="max-w-full max-h-48 object-contain"
+            className="max-w-full max-h-64 object-contain"
           />
         </div>
 

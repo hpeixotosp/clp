@@ -28,13 +28,8 @@ export async function POST(request: NextRequest) {
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
       
-      // Criar diretório temporário se não existir
-      const tempDir = path.join(process.cwd(), 'temp');
-      try {
-        await fs.access(tempDir);
-      } catch (error) {
-        await fs.mkdir(tempDir, { recursive: true });
-      }
+      // Criar diretório temporário no /tmp (gravável no Vercel)
+      const tempDir = '/tmp';
       
       // Salvar arquivo temporário
       fileName = `tr_etp_${Date.now()}.pdf`;
