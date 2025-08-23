@@ -20,11 +20,23 @@ def main():
     # Verificar se estamos no Vercel
     is_vercel = os.environ.get('VERCEL') == '1'
     
-    # Determinar comando Python correto
-    if is_vercel:
-        python_cmd = 'python3'
-    else:
-        python_cmd = 'python3'
+    # Testar comandos Python disponíveis
+    python_cmds = ['python3', 'python', '/usr/bin/python3', '/usr/bin/python']
+    python_cmd = None
+    
+    for cmd in python_cmds:
+        try:
+            test_result = subprocess.run([cmd, '--version'], capture_output=True, text=True)
+            if test_result.returncode == 0:
+                python_cmd = cmd
+                print(f"✓ Python encontrado: {cmd} - {test_result.stdout.strip()}", file=sys.stderr)
+                break
+        except:
+            continue
+    
+    if not python_cmd:
+        print(json.dumps({"error": "Python não encontrado no sistema. Tentei: " + ", ".join(python_cmds)}))
+        sys.exit(1)
     
     # Caminho para o script principal
     script_path = os.path.join(os.path.dirname(__file__), 'analisador_proposta.py')
