@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir, unlink } from 'fs/promises';
+import { writeFile, mkdir, unlink, readdir } from 'fs/promises';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+
+// Função para listar arquivos em um diretório
+async function listFiles(dir: string): Promise<string[]> {
+  try {
+    const files = await readdir(dir);
+    return files;
+  } catch (error) {
+    return [`Erro ao listar diretório: ${error}`];
+  }
+}
 
 const execAsync = promisify(exec);
 
@@ -51,10 +61,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Executar script Python
+    // Executar script Python usando wrapper
     const pythonScript = isVercel 
-      ? join(process.cwd(), 'backend_pdf_processor.py')
-      : join(process.cwd(), '..', 'backend_pdf_processor.py');
+      ? join(process.cwd(), 'backend_pdf_processor_wrapper.py')
+      : join(process.cwd(), '..', 'backend_pdf_processor_wrapper.py');
     
     console.log(`Script Python: ${pythonScript}`);
     console.log(`PDFs para processar: ${savedPaths.join(', ')}`);
@@ -79,6 +89,9 @@ export async function POST(request: NextRequest) {
       console.log('Comando executado:', command);
       
       const workingDir = isVercel ? process.cwd() : join(process.cwd(), '..');
+      console.log(`Executando com diretório de trabalho: ${workingDir}`);
+      console.log(`Arquivos no diretório de trabalho:`, await listFiles(workingDir));
+      
       const { stdout, stderr } = await execAsync(
         command,
         { cwd: workingDir }
@@ -94,6 +107,11 @@ export async function POST(request: NextRequest) {
       const csvPath = isVercel 
         ? join(process.cwd(), 'resultados_ponto.csv')
         : join(process.cwd(), '..', 'resultados_ponto.csv');
+      
+      console.log(`Procurando CSV em: ${csvPath}`);
+      
+      // Aguardar um pouco para garantir que o arquivo seja criado
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       if (existsSync(csvPath)) {
         console.log(`CSV encontrado: ${csvPath}`);

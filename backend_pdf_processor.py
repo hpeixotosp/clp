@@ -4,15 +4,50 @@ Backend Python para Processamento de PDFs de Ponto
 Converte PDFs para CSV e calcula banco de horas automaticamente
 """
 
-import pdfplumber
-import pandas as pd
-import re
-import json
 import sys
-import argparse
-from datetime import datetime
-from typing import Dict, List, Tuple, Optional
 import os
+
+# Verificar dependências críticas
+try:
+    import pdfplumber
+    print("✓ pdfplumber importado com sucesso")
+except ImportError as e:
+    print(f"❌ ERRO: pdfplumber não encontrado: {e}")
+    print("Instale com: pip install pdfplumber")
+    sys.exit(1)
+
+try:
+    import pandas as pd
+    print("✓ pandas importado com sucesso")
+except ImportError as e:
+    print(f"❌ ERRO: pandas não encontrado: {e}")
+    print("Instale com: pip install pandas")
+    sys.exit(1)
+
+try:
+    import re
+    import json
+    import argparse
+    from datetime import datetime
+    from typing import Dict, List, Tuple, Optional
+    print("✓ Bibliotecas padrão importadas com sucesso")
+except ImportError as e:
+    print(f"❌ ERRO: Biblioteca padrão não encontrada: {e}")
+    sys.exit(1)
+
+# Configurar encoding
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+        print("✓ Encoding configurado para UTF-8")
+    except Exception as e:
+        print(f"⚠️ Aviso: Não foi possível configurar encoding: {e}")
+
+print("=== INICIANDO PROCESSAMENTO DE PDFs ===")
+print(f"Python version: {sys.version}")
+print(f"Diretório atual: {os.getcwd()}")
+print(f"Script: {__file__}")
 
 class PontoProcessor:
     def __init__(self):
@@ -638,25 +673,49 @@ class PontoProcessor:
     
     def save_to_csv(self, results: List[Dict], output_path: str):
         """Salva resultados em CSV"""
-        # Preparar dados para CSV - apenas o resumo principal
-        csv_data = []
-        for result in results:
-            if 'error' not in result:
-                # Apenas o resumo principal, sem detalhes diários
-                csv_data.append({
-                    'colaborador': result['colaborador'],
-                    'periodo': result['periodo'],
-                    'previsto': result['previsto'],
-                    'realizado': result['realizado'],
-                    'saldo': result['saldo'],
-                    'assinatura': 'Sim' if result['assinatura'] else 'Não',
-                    'saldo_minutos': result['saldo_minutos']
-                })
+        try:
+            # Preparar dados para CSV - apenas o resumo principal
+            csv_data = []
+            for result in results:
+                if 'error' not in result:
+                    # Apenas o resumo principal, sem detalhes diários
+                    csv_data.append({
+                        'colaborador': result['colaborador'],
+                        'periodo': result['periodo'],
+                        'previsto': result['previsto'],
+                        'realizado': result['realizado'],
+                        'saldo': result['saldo'],
+                        'assinatura': 'Sim' if result['assinatura'] else 'Não',
+                        'saldo_minutos': result['saldo_minutos']
+                    })
+            
+            print(f"Preparando {len(csv_data)} registros para CSV")
+            
+                    # Salvar CSV
+        df = pd.DataFrame(csv_data)
+        
+        # Garantir que o diretório existe
+        output_dir = os.path.dirname(output_path)
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+            print(f"✓ Diretório criado: {output_dir}")
         
         # Salvar CSV
-        df = pd.DataFrame(csv_data)
         df.to_csv(output_path, index=False, encoding='utf-8-sig')
-        print(f"CSV salvo em: {output_path}")
+        print(f"✓ CSV salvo com sucesso em: {output_path}")
+        print(f"✓ Tamanho do arquivo: {os.path.getsize(output_path)} bytes")
+        
+        # Verificar se o arquivo foi realmente criado
+        if os.path.exists(output_path):
+            print(f"✓ Arquivo confirmado no sistema: {output_path}")
+        else:
+            print(f"❌ ERRO: Arquivo não foi criado: {output_path}")
+            
+        except Exception as e:
+            print(f"❌ ERRO ao salvar CSV: {e}")
+            print(f"Diretório atual: {os.getcwd()}")
+            print(f"Caminho tentado: {output_path}")
+            raise
         
         # Salvar detalhes diários em arquivo separado (opcional)
         detalhes_path = output_path.replace('.csv', '_detalhes.csv')
@@ -697,44 +756,69 @@ class PontoProcessor:
 
 def main():
     """Função principal com suporte a argumentos de linha de comando"""
-    parser = argparse.ArgumentParser(description='Processa PDFs de ponto e gera CSV')
-    parser.add_argument('--pdfs', nargs='+', help='Caminhos para os PDFs a serem processados')
-    parser.add_argument('--output', default='resultados_ponto.csv', help='Nome do arquivo CSV de saída')
-    
-    args = parser.parse_args()
-    
-    processor = PontoProcessor()
-    
-    if args.pdfs:
-        # Processar PDFs especificados
-        pdf_files = args.pdfs
-        print(f"Processando PDFs especificados: {pdf_files}")
-    else:
-        # Modo automático: procurar PDFs no diretório atual
-        pdf_files = [f for f in os.listdir('.') if f.endswith('.pdf') and 'ponto' in f.lower()]
-        if not pdf_files:
-            print("Nenhum PDF de ponto encontrado no diretório atual")
-            return
-        print(f"PDFs encontrados automaticamente: {pdf_files}")
-    
-    # Processar todos os PDFs
-    results = processor.process_multiple_pdfs(pdf_files)
-    
-    # Salvar resultados em CSV
-    processor.save_to_csv(results, args.output)
-    
-    # Mostrar resumo
-    print("\n=== RESUMO DOS RESULTADOS ===")
-    for result in results:
-        if 'error' not in result:
-            print(f"{result['colaborador']} - {result['periodo']}: {result['saldo']} ({result['assinatura']})")
+    try:
+        print("=== INICIANDO FUNÇÃO MAIN ===")
+        
+        parser = argparse.ArgumentParser(description='Processa PDFs de ponto e gera CSV')
+        parser.add_argument('--pdfs', nargs='+', help='Caminhos para os PDFs a serem processados')
+        parser.add_argument('--output', default='resultados_ponto.csv', help='Nome do arquivo CSV de saída')
+        
+        args = parser.parse_args()
+        print(f"Argumentos recebidos: {args}")
+        
+        processor = PontoProcessor()
+        print("✓ Processador inicializado")
+        
+        if args.pdfs:
+            # Processar PDFs especificados
+            pdf_files = args.pdfs
+            print(f"✓ Processando PDFs especificados: {pdf_files}")
         else:
-            print(f"ERRO: {result['error']}")
-    
-    # Retornar resultados como JSON para a API
-    if len(sys.argv) > 1:  # Se chamado via linha de comando
-        print("\n=== RESULTADOS JSON ===")
-        print(json.dumps(results, indent=2, ensure_ascii=False))
+            # Modo automático: procurar PDFs no diretório atual
+            pdf_files = [f for f in os.listdir('.') if f.endswith('.pdf') and 'ponto' in f.lower()]
+            if not pdf_files:
+                print("⚠️ Nenhum PDF de ponto encontrado no diretório atual")
+                return
+            print(f"✓ PDFs encontrados automaticamente: {pdf_files}")
+        
+        # Verificar se os arquivos existem
+        for pdf_file in pdf_files:
+            if not os.path.exists(pdf_file):
+                print(f"❌ ERRO: Arquivo não encontrado: {pdf_file}")
+                return
+        
+        print(f"✓ Todos os {len(pdf_files)} PDFs existem")
+        
+        # Processar todos os PDFs
+        print("=== INICIANDO PROCESSAMENTO ===")
+        results = processor.process_multiple_pdfs(pdf_files)
+        print(f"✓ Processamento concluído: {len(results)} resultados")
+        
+        # Salvar resultados em CSV
+        print("=== SALVANDO CSV ===")
+        processor.save_to_csv(results, args.output)
+        print("✓ CSV salvo com sucesso")
+        
+        # Mostrar resumo
+        print("\n=== RESUMO DOS RESULTADOS ===")
+        for result in results:
+            if 'error' not in result:
+                print(f"✓ {result['colaborador']} - {result['periodo']}: {result['saldo']} ({result['assinatura']})")
+            else:
+                print(f"❌ ERRO: {result['error']}")
+        
+        # Retornar resultados como JSON para a API
+        if len(sys.argv) > 1:  # Se chamado via linha de comando
+            print("\n=== RESULTADOS JSON ===")
+            print(json.dumps(results, indent=2, ensure_ascii=False))
+        
+        print("=== PROCESSAMENTO CONCLUÍDO COM SUCESSO ===")
+        
+    except Exception as e:
+        print(f"❌ ERRO CRÍTICO na função main: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

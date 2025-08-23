@@ -67,12 +67,22 @@ export interface Demanda {
   titulo: string;
   descricao: string;
   setor: string;
-  prioridade: string;
-  prazo: string;
-  dataCadastro: string;
-  responsavel: string;
-  situacao: string;
+  prioridade: "alta" | "media" | "baixa";
+  situacao: "pendente" | "emandamento" | "concluida" | "cancelada";
+  prazo?: Date;
+  dataCadastro: Date;
+  responsavel?: string;
   responsavel_custom?: string;
+  andamento?: string;
+  historicoAndamentos?: AndamentoDemanda[];
+}
+
+export interface AndamentoDemanda {
+  id: number;
+  demanda_id: number;
+  data: Date;
+  descricao: string;
+  usuario?: string;
 }
 
 export interface FiltrosDemanda {

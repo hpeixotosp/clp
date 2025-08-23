@@ -171,7 +171,11 @@ export default function PROADPage() {
         const response = await fetch(`/api/proads/${editingId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
+          body: JSON.stringify({
+            ...formData,
+            // Garantir que a data seja passada corretamente para o histórico
+            dataCadastro: formData.dataCadastro instanceof Date ? formData.dataCadastro.toISOString() : formData.dataCadastro
+          })
         });
 
         if (response.ok) {
@@ -184,7 +188,11 @@ export default function PROADPage() {
         const response = await fetch('/api/proads', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
+          body: JSON.stringify({
+            ...formData,
+            // Garantir que a data seja passada corretamente
+            dataCadastro: formData.dataCadastro instanceof Date ? formData.dataCadastro.toISOString() : formData.dataCadastro
+          })
         });
 
         if (response.ok) {
@@ -472,7 +480,7 @@ export default function PROADPage() {
                 // Modal de edição com duas abas
                 <Tabs defaultValue="andamento" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="andamento">Editar Andamento</TabsTrigger>
+                    <TabsTrigger value="andamento">Atualizar Andamento</TabsTrigger>
                     <TabsTrigger value="geral">Editar Geral</TabsTrigger>
                   </TabsList>
                   
@@ -683,16 +691,7 @@ export default function PROADPage() {
                     </div>
                   </div>
 
-                  {/* Andamento */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Andamento</label>
-                    <Textarea
-                      placeholder="Descreva o andamento do PROAD..."
-                      value={formData.andamento}
-                      onChange={(e) => handleInputChange('andamento', e.target.value)}
-                      rows={3}
-                    />
-                  </div>
+                  {/* Removido campo de andamento da aba "Editar Geral" */}
                   
                   <div className="flex gap-2 justify-end">
                     <Button type="button" variant="outline" onClick={cancelEdit}>

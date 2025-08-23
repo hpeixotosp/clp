@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Wrapper robusto para o Analisador de Propostas
+Wrapper robusto para o Analisador de TRs e ETPs
 Garante compatibilidade com Vercel e tratamento de erros robusto
 """
 
-import os
 import sys
+import os
 import subprocess
 import json
 from pathlib import Path
@@ -27,11 +27,11 @@ def main():
         python_cmd = 'python3'
     
     # Caminho para o script principal
-    script_path = os.path.join(os.path.dirname(__file__), 'analisador_proposta.py')
+    script_path = os.path.join(os.path.dirname(__file__), 'analisador_tr_etp_safe.py')
     
     # Verificar se o script existe
     if not os.path.exists(script_path):
-        print(json.dumps({"error": f"Script não encontrado: {script_path}"}))
+        print(json.dumps({"error": f"Script não encontrado: {script_path}", "results": []}))
         sys.exit(1)
     
     # Construir comando
@@ -49,7 +49,8 @@ def main():
             text=True,
             timeout=300,  # 5 minutos
             cwd=os.path.dirname(__file__),
-            encoding='utf-8'
+            encoding='utf-8',
+            errors='ignore'
         )
         
         # Imprimir saída
@@ -58,20 +59,36 @@ def main():
         if result.stderr:
             print("STDERR:", result.stderr, file=sys.stderr)
         
-        # Se executou com sucesso, imprimir resultado
+        # Se executou com sucesso, filtrar emojis através do limpa_emojis.py
         if result.returncode == 0:
-            print(result.stdout)
+            limpa_script = os.path.join(os.path.dirname(__file__), 'limpa_emojis.py')
+            if os.path.exists(limpa_script):
+                print("✓ Executando limpeza de emojis", file=sys.stderr)
+                limpa_cmd = [python_cmd, limpa_script]
+                limpa_result = subprocess.run(
+                    limpa_cmd,
+                    input=result.stdout,
+                    capture_output=True,
+                    text=True,
+                    encoding='ascii',
+                    errors='ignore'
+                )
+                print(limpa_result.stdout)
+            else:
+                # Se não tiver o limpa_emojis, fazer limpeza básica
+                output_limpo = result.stdout.encode('ascii', errors='ignore').decode('ascii')
+                print(output_limpo)
         else:
-            print(json.dumps({"error": f"Erro na execução: {result.stderr}"}))
+            print(json.dumps({"error": f"Erro na execução: {result.stderr}", "results": []}))
         
         # Retornar código de saída
         sys.exit(result.returncode)
         
     except subprocess.TimeoutExpired:
-        print(json.dumps({"error": "Timeout ao executar script"}))
+        print(json.dumps({"error": "Timeout ao executar script", "results": []}))
         sys.exit(1)
     except Exception as e:
-        print(json.dumps({"error": f"Erro no wrapper: {e}"}))
+        print(json.dumps({"error": f"Erro no wrapper: {e}", "results": []}))
         sys.exit(1)
 
 if __name__ == "__main__":

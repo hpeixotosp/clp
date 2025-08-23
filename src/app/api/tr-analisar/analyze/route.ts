@@ -41,38 +41,43 @@ export async function POST(request: NextRequest) {
       console.log(`  Nome original: ${file.name}`);
     }
 
-    // Construir comando Python
-    const scriptPath = path.join(process.cwd(), 'analisador_wrapper.py');
-    let pythonCommand = `python3 "${scriptPath}" --type ${documentType}`;
+    // Construir comando Python usando wrapper robusto
+    const scriptPath = path.join(process.cwd(), 'analisador_tr_wrapper.py');
+    
+    // Usar 'python' no Vercel, 'python3' localmente
+    const isVercel = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+    const pythonCommand = isVercel ? 'python' : 'python3';
+    
+    let command = `${pythonCommand} "${scriptPath}" --type ${documentType}`;
     
     // Adicionar API key
     const apiKey = process.env.GOOGLE_AI_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: 'API key não configurada' }, { status: 500 });
     }
-    pythonCommand += ` --api-key "${apiKey}"`;
+    command += ` --api-key "${apiKey}"`;
     
     // Adicionar arquivo ou texto
     if (file) {
-      pythonCommand += ` --file "${filePath}"`;
+      command += ` --file "${filePath}"`;
     } else if (text) {
-      pythonCommand += ` --text "${text}"`;
+      command += ` --text "${text}"`;
     }
     
     // Adicionar pontos de foco se fornecidos
     if (focusPoints) {
-      pythonCommand += ` --focus-points "${focusPoints}"`;
+      command += ` --focus-points "${focusPoints}"`;
     }
     
     console.log('🚀 Executando comando Python:');
     console.log(`  Script: ${scriptPath}`);
     console.log(`  Tipo: ${documentType}`);
-    console.log(`  Comando completo: ${pythonCommand}`);
+    console.log(`  Comando completo: ${command}`);
     
     // Executar comando Python
     const executePython = () => {
       return new Promise<string>((resolve, reject) => {
-        exec(pythonCommand, { maxBuffer: 10 * 1024 * 1024 }, async (error, stdout, stderr) => {
+        exec(command, { maxBuffer: 10 * 1024 * 1024 }, async (error, stdout, stderr) => {
           console.log('📤 Output do Python:');
           console.log(`  Conteúdo: ${stdout}`);
           console.log(`  Tamanho: ${stdout.length}`);

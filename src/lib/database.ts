@@ -96,7 +96,19 @@ export async function getDatabase(): Promise<Database> {
         prazo DATETIME,
         responsavel TEXT,
         responsavel_custom TEXT,
+        andamento TEXT,
         data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS demandaandamentos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        demanda_id INTEGER NOT NULL,
+        data DATETIME NOT NULL,
+        descricao TEXT NOT NULL,
+        usuario TEXT,
+        FOREIGN KEY (demanda_id) REFERENCES demandas(id) ON DELETE CASCADE
       )
     `);
 
@@ -110,6 +122,7 @@ export async function getDatabase(): Promise<Database> {
       CREATE INDEX IF NOT EXISTS idx_demandas_setor ON demandas(setor);
       CREATE INDEX IF NOT EXISTS idx_demandas_prioridade ON demandas(prioridade);
       CREATE INDEX IF NOT EXISTS idx_demandas_situacao ON demandas(situacao);
+      CREATE INDEX IF NOT EXISTS idx_demandaandamentos_demanda_id ON demandaandamentos(demanda_id);
     `);
     
     // Se estivermos no Vercel (banco em memória), popular com dados iniciais
@@ -397,8 +410,8 @@ export async function salvarDemanda(dados: Demanda): Promise<number> {
   try {
     const db = await getDatabase();
     const result = await db.run(`
-      INSERT INTO demandas (titulo, descricao, setor, prioridade, situacao, dataCadastro, prazo, responsavel, responsavel_custom)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO demandas (titulo, descricao, setor, prioridade, situacao, dataCadastro, prazo, responsavel, responsavel_custom, andamento)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       dados.titulo, 
       dados.descricao, 
@@ -408,9 +421,20 @@ export async function salvarDemanda(dados: Demanda): Promise<number> {
       dados.dataCadastro, 
       dados.prazo, 
       dados.responsavel,
-      dados.responsavel_custom
+      dados.responsavel_custom,
+      dados.andamento
     ]);
     console.log('✅ Demanda salva com sucesso, ID:', result.lastID);
+
+    // Salvar o primeiro andamento no histórico
+    if (dados.andamento && result.lastID) {
+      await db.run(`
+        INSERT INTO demandaandamentos (demanda_id, data, descricao)
+        VALUES (?, ?, ?)
+      `, [result.lastID, new Date(), dados.andamento]);
+      console.log('✅ Primeiro andamento salvo no histórico para a Demanda ID:', result.lastID);
+    }
+
     return result.lastID!;
   } catch (error) {
     console.error('❌ Erro ao salvar Demanda:', error);
@@ -448,7 +472,16 @@ export async function buscarDemandas(filtros: FiltrosDemanda = {}): Promise<Dema
     query += ' ORDER BY data_criacao DESC';
 
     const demandas = await db.all(query, params);
-    console.log(`✅ ${demandas.length} demandas encontradas`);
+    
+    // Para cada demanda, buscar seu histórico de andamentos
+    for (const demanda of demandas) {
+      demanda.historicoAndamentos = await db.all(
+        'SELECT * FROM demandaandamentos WHERE demanda_id = ? ORDER BY data DESC',
+        [demanda.id]
+      );
+    }
+    
+    console.log(`✅ ${demandas.length} demandas encontradas com seus históricos`);
     return demandas;
   } catch (error) {
     console.error('❌ Erro ao buscar demandas:', error);
@@ -459,10 +492,14 @@ export async function buscarDemandas(filtros: FiltrosDemanda = {}): Promise<Dema
 export async function atualizarDemanda(id: number, dados: Partial<Demanda>): Promise<void> {
   try {
     const db = await getDatabase();
+    
+    // Antes de atualizar, buscar o andamento atual
+    const demandaAtual = await db.get('SELECT andamento FROM demandas WHERE id = ?', [id]);
+
     await db.run(`
       UPDATE demandas 
       SET titulo = ?, descricao = ?, setor = ?, prioridade = ?, situacao = ?, 
-          dataCadastro = ?, prazo = ?, responsavel = ?, responsavel_custom = ?
+          dataCadastro = ?, prazo = ?, responsavel = ?, responsavel_custom = ?, andamento = ?
       WHERE id = ?
     `, [
       dados.titulo, 
@@ -474,8 +511,19 @@ export async function atualizarDemanda(id: number, dados: Partial<Demanda>): Pro
       dados.prazo, 
       dados.responsavel,
       dados.responsavel_custom,
+      dados.andamento,
       id
     ]);
+
+    // Se o andamento foi alterado, adicionar ao histórico
+    if (dados.andamento && dados.andamento !== demandaAtual?.andamento) {
+      await db.run(`
+        INSERT INTO demandaandamentos (demanda_id, data, descricao)
+        VALUES (?, ?, ?)
+      `, [id, new Date(), dados.andamento]);
+      console.log('✅ Novo andamento adicionado ao histórico da Demanda ID:', id);
+    }
+
     console.log('✅ Demanda atualizada com sucesso, ID:', id);
   } catch (error) {
     console.error('❌ Erro ao atualizar Demanda:', error);

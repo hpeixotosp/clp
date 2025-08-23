@@ -19,19 +19,7 @@ import { setores } from "@/lib/data";
 import { responsaveis } from "@/lib/responsaveis";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-
-interface Demanda {
-  id?: number;
-  titulo: string;
-  descricao: string;
-  setor: string;
-  prioridade: "alta" | "media" | "baixa";
-  situacao: "pendente" | "emandamento" | "concluida" | "cancelada";
-  dataCadastro: Date;
-  prazo?: Date;
-  responsavel?: string;
-  responsavel_custom?: string;
-}
+import { Demanda, Andamento } from "@/lib/types";
 
 export default function DemandasPage() {
   const [demandas, setDemandas] = useState<Demanda[]>([]);
@@ -49,7 +37,8 @@ export default function DemandasPage() {
     dataCadastro: new Date(),
     prazo: undefined,
     responsavel: "",
-    responsavel_custom: ""
+    responsavel_custom: "",
+    andamento: ""
   });
 
   // Carregar demandas do banco
@@ -97,7 +86,8 @@ export default function DemandasPage() {
       dataCadastro: new Date(),
       prazo: undefined,
       responsavel: "",
-      responsavel_custom: ""
+      responsavel_custom: "",
+      andamento: ""
     });
     setShowCustomResponsavel(false);
   };
@@ -116,13 +106,19 @@ export default function DemandasPage() {
         const response = await fetch(`/api/demandas/${editingId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
+          body: JSON.stringify({
+            ...formData,
+            // Garantir que a data seja passada corretamente para o histórico
+            dataCadastro: formData.dataCadastro instanceof Date ? formData.dataCadastro.toISOString() : formData.dataCadastro,
+            prazo: formData.prazo instanceof Date ? formData.prazo.toISOString() : formData.prazo
+          })
         });
 
         if (response.ok) {
           await carregarDemandas();
           setIsEditing(false);
           setEditingId(null);
+          setIsAdding(false); // Fechar o modal de edição
           resetForm();
         }
       } else {
@@ -130,7 +126,12 @@ export default function DemandasPage() {
         const response = await fetch('/api/demandas', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
+          body: JSON.stringify({
+            ...formData,
+            // Garantir que as datas sejam passadas corretamente
+            dataCadastro: formData.dataCadastro instanceof Date ? formData.dataCadastro.toISOString() : formData.dataCadastro,
+            prazo: formData.prazo instanceof Date ? formData.prazo.toISOString() : formData.prazo
+          })
         });
 
         if (response.ok) {
@@ -155,7 +156,8 @@ export default function DemandasPage() {
       dataCadastro: demanda.dataCadastro,
       prazo: demanda.prazo,
       responsavel: demanda.responsavel || "",
-      responsavel_custom: demanda.responsavel_custom || ""
+      responsavel_custom: demanda.responsavel_custom || "",
+      andamento: demanda.andamento || ""
     });
     setShowCustomResponsavel(demanda.responsavel === 'Outro(a)');
     setIsEditing(true);
@@ -336,7 +338,7 @@ export default function DemandasPage() {
             {isEditing ? (
               <Tabs defaultValue="andamento" className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="andamento">Editar Andamento</TabsTrigger>
+                  <TabsTrigger value="andamento">Atualizar Andamento</TabsTrigger>
                   <TabsTrigger value="geral">Editar Geral</TabsTrigger>
                 </TabsList>
                 
@@ -375,11 +377,11 @@ export default function DemandasPage() {
                       </div>
                       
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Descrição</label>
+                        <label className="text-sm font-medium">Andamento</label>
                         <Textarea
-                          placeholder="Descreva a demanda..."
-                          value={formData.descricao}
-                          onChange={(e) => handleInputChange('descricao', e.target.value)}
+                          placeholder="Descreva o andamento da demanda..."
+                          value={formData.andamento}
+                          onChange={(e) => handleInputChange('andamento', e.target.value)}
                           rows={4}
                         />
                       </div>
@@ -389,7 +391,7 @@ export default function DemandasPage() {
                           Cancelar
                         </Button>
                         <Button type="submit">
-                          Atualizar Demanda
+                          Atualizar Andamento
                         </Button>
                       </div>
                     </div>
@@ -779,10 +781,19 @@ export default function DemandasPage() {
                       </div>
                       
                       {/* Informações principais em grid responsivo */}
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                         <div className="space-y-2">
                           <p className="font-semibold text-muted-foreground text-sm uppercase tracking-wide">Assunto</p>
                           <p className="text-foreground text-base">{demanda.descricao || "Sem descrição"}</p>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="font-semibold text-muted-foreground text-sm uppercase tracking-wide">Data do Último Andamento</p>
+                          <p className="text-foreground text-base">
+                            {demanda.historicoAndamentos && demanda.historicoAndamentos.length > 0 
+                              ? format(new Date(demanda.historicoAndamentos[0].data), "dd/MM/yyyy", { locale: ptBR })
+                              : format(demanda.dataCadastro, "dd/MM/yyyy", { locale: ptBR })
+                            }
+                          </p>
                         </div>
                         <div className="space-y-2">
                           <p className="font-semibold text-muted-foreground text-sm uppercase tracking-wide">Responsável</p>
