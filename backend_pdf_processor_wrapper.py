@@ -21,7 +21,7 @@ def main():
     
     # Determinar comando Python correto
     if is_vercel:
-        python_cmd = 'python'
+        python_cmd = 'python3'
     else:
         python_cmd = 'python3'
     

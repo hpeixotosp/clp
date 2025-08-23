@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
         // Detectar se estamos no Vercel (ambiente de produção)
         const isVercel = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-        const pythonCommand = isVercel ? 'python' : 'python3';
+        const pythonCommand = isVercel ? 'python3' : 'python3';
         
         if (mode === 'identify_items') {
             command = `${pythonCommand} "${pythonWrapper}" --mode identify_items --tr "${trPath}"`;

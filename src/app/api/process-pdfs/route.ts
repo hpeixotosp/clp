@@ -21,6 +21,10 @@ export async function POST(request: NextRequest) {
   try {
     console.log('=== INICIANDO PROCESSAMENTO DE PDFs ===');
     
+    // Usar 'python3' no Vercel, 'python3' localmente
+    const isVercel = process.env.VERCEL === '1';
+    const pythonCommand = isVercel ? 'python3' : 'python3';
+
     const formData = await request.formData();
     const files = formData.getAll('files') as File[];
     
@@ -34,7 +38,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Criar diretório temporário para os PDFs
-    const isVercel = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
     const tempDir = isVercel ? '/tmp' : join(process.cwd(), 'temp_pdfs');
     console.log(`Criando diretório temporário: ${tempDir}`);
     if (!isVercel) {
@@ -80,7 +83,6 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const pythonCommand = isVercel ? 'python' : 'python3';
       
       // Construir comando com aspas corretas para cada arquivo
       const quotedPaths = savedPaths.map(path => `"${path}"`).join(' ');
