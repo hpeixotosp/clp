@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     // Construir comando Python
     const scriptPath = path.join(process.cwd(), 'analisador_wrapper.py');
-    let pythonCommand = `python "${scriptPath}" --type ${documentType}`;
+    let pythonCommand = `python3 "${scriptPath}" --type ${documentType}`;
     
     // Adicionar API key
     const apiKey = process.env.GOOGLE_AI_API_KEY;

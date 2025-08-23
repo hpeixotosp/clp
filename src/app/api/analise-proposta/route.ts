@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
         let command: string;
 
         if (mode === 'identify_items') {
-            command = `python "${pythonScript}" --mode identify_items --tr "${trPath}"`;
+            command = `python3 "${pythonScript}" --mode identify_items --tr "${trPath}"`;
         } else if (mode === 'analyze_item') {
             const proposalFiles = formData.getAll('proposalFiles') as File[];
             const itemName = formData.get('itemName') as string;
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
             }
             
             const proposalArgs = proposalPaths.map(p => `"--proposal" "${p}"`).join(' ');
-            command = `python "${pythonScript}" --mode analyze_item --tr "${trPath}" --item_name "${itemName}" ${proposalArgs}`;
+            command = `python3 "${pythonScript}" --mode analyze_item --tr "${trPath}" --item_name "${itemName}" ${proposalArgs}`;
         } else {
             return NextResponse.json({ error: 'Modo de operação inválido' }, { status: 400 });
         }

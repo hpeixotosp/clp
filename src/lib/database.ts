@@ -22,7 +22,9 @@ export async function getDatabase(): Promise<Database> {
     return db;
   }
   
-  const dbPath = path.join(process.cwd(), 'trt21.db');
+  // Detectar se estamos no Vercel (ambiente de produção)
+  const isVercel = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+  const dbPath = isVercel ? ':memory:' : path.join(process.cwd(), 'trt21.db');
   
   try {
     const sqlite3 = await import('sqlite3');
@@ -110,11 +112,45 @@ export async function getDatabase(): Promise<Database> {
       CREATE INDEX IF NOT EXISTS idx_demandas_situacao ON demandas(situacao);
     `);
     
+    // Se estivermos no Vercel (banco em memória), popular com dados iniciais
+    if (isVercel) {
+      await populateInitialData(db);
+    }
+    
     console.log('✅ Banco SQLite conectado com sucesso');
     return db;
   } catch (error) {
     console.error('❌ Erro ao conectar com banco SQLite:', error);
     throw error;
+  }
+}
+
+async function populateInitialData(database: Database) {
+  try {
+    // Verificar se já existem dados
+    const existingProads = await database.all('SELECT COUNT(*) as count FROM proads');
+    if (existingProads[0].count > 0) {
+      return; // Dados já existem
+    }
+
+    // Inserir alguns dados iniciais para demonstração
+    console.log('🔄 Populando banco em memória com dados iniciais...');
+    
+    // Inserir PROADs de exemplo
+    await database.run(`
+      INSERT INTO proads (numero, ano, setor, prioridade, situacao, dataCadastro, andamento, responsavel, assunto, responsavel_custom)
+      VALUES ('0001', '25', 'Administrativo', 'media', 'ativo', '2025-01-01', 'PROAD criado para demonstração', 'João Silva', 'Demonstração do sistema', null)
+    `);
+
+    // Inserir refis de exemplo
+    await database.run(`
+      INSERT INTO refis (marca, quantidadeDisponivel, fotoUrl, descricao, dataCadastro, ultimaAtualizacao)
+      VALUES ('LIBELL', 50, null, 'Refil de demonstração', '2025-01-01', '2025-01-01')
+    `);
+
+    console.log('✅ Dados iniciais populados com sucesso');
+  } catch (error) {
+    console.error('❌ Erro ao popular dados iniciais:', error);
   }
 }
 
@@ -468,10 +504,10 @@ export async function salvarRefil(dados: Omit<Refil, 'id'>): Promise<number> {
     `, [
       dados.marca,
       dados.quantidadeDisponivel,
-      dados.fotoUrl,
-      dados.descricao,
-      dados.dataCadastro,
-      dados.ultimaAtualizacao
+      dados.fotoUrl || null,
+      dados.descricao || null,
+      dados.dataCadastro instanceof Date ? dados.dataCadastro.toISOString() : dados.dataCadastro,
+      dados.ultimaAtualizacao instanceof Date ? dados.ultimaAtualizacao.toISOString() : dados.ultimaAtualizacao
     ]);
     console.log('✅ Refil salvo com sucesso, ID:', result.lastID);
     return result.lastID!;

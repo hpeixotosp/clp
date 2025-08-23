@@ -42,7 +42,7 @@ def executar_analisador():
             return {"error": f"Script não encontrado: {script_path}", "results": []}
         
         # Executar o script principal com os mesmos argumentos
-        cmd = [sys.executable, str(script_path)] + sys.argv[1:]
+        cmd = ["python3", str(script_path)] + sys.argv[1:]
         
         print(f"Executando: {' '.join(cmd)}")
         
