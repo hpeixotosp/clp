@@ -2,17 +2,6 @@
   "env": {
     "GOOGLE_AI_API_KEY": "AIzaSyDXAgbYdfGX_LhSAwljKoWeerzWHGgQC3I"
   },
-  "functions": {
-    "src/app/api/tr-analisar/analyze/route.ts": {
-      "runtime": "nodejs20.x"
-    },
-    "src/app/api/analise-proposta/route.ts": {
-      "runtime": "nodejs20.x"
-    },
-    "src/app/api/process-pdfs/route.ts": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "buildCommand": "npm run build",
   "installCommand": "npm install && pip install -r requirements.txt"
 }
