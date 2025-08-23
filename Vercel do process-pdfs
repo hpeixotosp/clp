@@ -1,0 +1,5 @@
+[33mac29016[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Corrigir referências ao isVercel para deploy no Railway
+[33mae5a1b8[m Migrate from Vercel to Netlify: Add netlify.toml and update configurations
+[33m017f5a3[m FIX: Remove runtime configuration from vercel.json
+[33m786fc4d[m FIX: Detecção robusta de Python e configuração Vercel correta
+[33m57621b5[m FIX: Move requirements.txt to root for Vercel Python build
