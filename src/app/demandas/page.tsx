@@ -11,15 +11,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon, Plus, AlertTriangle, Clock, CheckCircle, AlertCircle, Edit, Trash2 } from "lucide-react";
+import { Calendar as CalendarIcon, Plus, AlertTriangle, Clock, CheckCircle, AlertCircle, Edit, Trash2, FileText as FileTextIcon } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { setores } from "@/lib/data";
 import { responsaveis } from "@/lib/responsaveis";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Demanda, Andamento } from "@/lib/types";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Demanda, AndamentoDemanda } from "@/lib/types";
 
 export default function DemandasPage() {
   const [demandas, setDemandas] = useState<Demanda[]>([]);
@@ -27,6 +28,8 @@ export default function DemandasPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showCustomResponsavel, setShowCustomResponsavel] = useState(false);
+  const [editingAndamentoId, setEditingAndamentoId] = useState<number | null>(null);
+  const [editingAndamentoData, setEditingAndamentoData] = useState({ descricao: '', data: new Date() });
 
   const [formData, setFormData] = useState<Demanda>({
     titulo: "",
@@ -169,16 +172,46 @@ export default function DemandasPage() {
     if (confirm('Tem certeza que deseja excluir esta demanda?')) {
       try {
         const response = await fetch(`/api/demandas/${id}`, {
-          method: 'DELETE'
+          method: 'DELETE',
         });
-
+        
         if (response.ok) {
           await carregarDemandas();
+        } else {
+          alert('Erro ao excluir demanda');
         }
       } catch (error) {
-        console.error('Erro ao deletar demanda:', error);
-        alert('Erro ao deletar demanda. Tente novamente.');
+        console.error('Erro ao excluir demanda:', error);
+        alert('Erro ao excluir demanda');
       }
+    }
+  };
+
+  const handleEditAndamento = (andamento: AndamentoDemanda) => {
+    setEditingAndamentoId(andamento.id);
+    setEditingAndamentoData({
+      descricao: andamento.descricao,
+      data: new Date(andamento.data)
+    });
+  };
+
+  const handleCancelEditAndamento = () => {
+    setEditingAndamentoId(null);
+    setEditingAndamentoData({ descricao: '', data: new Date() });
+  };
+
+  const handleSaveAndamento = async () => {
+    if (!editingAndamentoId) return;
+    
+    try {
+      // Aqui você implementaria a lógica para salvar o andamento editado
+      // Por enquanto, apenas fechar o modo de edição
+      setEditingAndamentoId(null);
+      setEditingAndamentoData({ descricao: '', data: new Date() });
+      await carregarDemandas(); // Recarregar para mostrar as mudanças
+    } catch (error) {
+      console.error('Erro ao salvar andamento:', error);
+      alert('Erro ao salvar andamento');
     }
   };
 
@@ -815,28 +848,138 @@ export default function DemandasPage() {
                       {demanda.prazo && (
                         <span className="font-medium">Prazo: {format(demanda.prazo, "dd/MM/yyyy", { locale: ptBR })}</span>
                       )}
-                    </div>
-                    
-                    {/* Botões de ação */}
-                    <div className="flex gap-2 items-center justify-end mt-4 pt-4 border-t">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(demanda)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(demanda.id!)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      
+                      {/* Botões de ação na mesma linha */}
+                      <div className="flex gap-2 items-center">
+                        {/* Botão de Histórico */}
+                        {demanda.historicoAndamentos && demanda.historicoAndamentos.length > 0 && (
+                          <Dialog>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <DialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-1 flex items-center justify-center">
+                                    <FileTextIcon className="h-4 w-4 flex-shrink-0" />
+                                  </Button>
+                                </DialogTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent><p>Ver Histórico de Andamentos</p></TooltipContent>
+                            </Tooltip>
+                            <DialogContent className="max-w-3xl">
+                              <DialogHeader>
+                                <DialogTitle>Histórico da Demanda: {demanda.titulo}</DialogTitle>
+                                <DialogDescription>Todos os andamentos registrados para esta demanda.</DialogDescription>
+                              </DialogHeader>
+                              <div className="max-h-[70vh] overflow-y-auto pr-6 py-4">
+                                <div className="relative pl-12">
+                                  {/* Linha vertical */}
+                                  <div className="absolute left-12 top-0 bottom-0 w-0.5 bg-border"></div>
+                                
+                                <ul className="space-y-8">
+                                  {demanda.historicoAndamentos.map((andamento, index) => (
+                                    <li key={andamento.id} className="relative group">
+                                      {/* Ponto na timeline */}
+                                      <div className="absolute -left-[42px] top-1 h-8 w-8 bg-primary rounded-full flex items-center justify-center ring-4 ring-background">
+                                        <FileTextIcon className="h-3 w-3 text-primary-foreground flex-shrink-0" />
+                                      </div>
+                                      
+                                      <div className="ml-12">
+                                        {editingAndamentoId === andamento.id ? (
+                                          // Modo de edição
+                                          <div className="space-y-3">
+                                            <div className="flex items-center justify-between mb-2">
+                                              <div className="flex items-center gap-2">
+                                                <Input
+                                                  type="date"
+                                                  value={format(editingAndamentoData.data, "yyyy-MM-dd")}
+                                                  onChange={(e) => {
+                                                    const newDate = new Date(e.target.value);
+                                                    newDate.setHours(editingAndamentoData.data.getHours(), editingAndamentoData.data.getMinutes());
+                                                    setEditingAndamentoData(prev => ({ ...prev, data: newDate }));
+                                                  }}
+                                                  className="w-auto"
+                                                />
+                                                <Input
+                                                  type="time"
+                                                  value={format(editingAndamentoData.data, "HH:mm")}
+                                                  onChange={(e) => {
+                                                    const [hours, minutes] = e.target.value.split(':');
+                                                    const newData = new Date(editingAndamentoData.data);
+                                                    newData.setHours(parseInt(hours), parseInt(minutes));
+                                                    setEditingAndamentoData(prev => ({ ...prev, data: newData }));
+                                                  }}
+                                                  className="w-20"
+                                                />
+                                              </div>
+                                              <div className="flex gap-1">
+                                                <Button size="sm" onClick={handleSaveAndamento} className="h-6 w-6 p-0">
+                                                  <Check className="h-3 w-3" />
+                                                </Button>
+                                                <Button variant="ghost" size="sm" onClick={handleCancelEditAndamento} className="h-6 w-6 p-0">
+                                                  <X className="h-3 w-3" />
+                                                </Button>
+                                              </div>
+                                            </div>
+                                            <Textarea
+                                              value={editingAndamentoData.descricao}
+                                              onChange={(e) => setEditingAndamentoData(prev => ({ ...prev, descricao: e.target.value }))}
+                                              className="min-h-[80px]"
+                                              placeholder="Descreva o andamento..."
+                                            />
+                                          </div>
+                                        ) : (
+                                          // Modo de visualização
+                                          <>
+                                            <div className="flex items-center justify-between mb-1">
+                                              <p className="font-semibold text-sm">{format(new Date(andamento.data), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    className="h-6 w-6 p-0"
+                                                    onClick={() => handleEditAndamento(andamento)}
+                                                  >
+                                                    <Edit className="h-3 w-3" />
+                                                  </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                  <p>Editar andamento</p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </div>
+                                            <p className="text-muted-foreground whitespace-pre-wrap">{andamento.descricao}</p>
+                                          </>
+                                        )}
+                                      </div>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(demanda)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(demanda.id!)}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
+                  
+                  {/* Remover a seção de botões de ação que estava duplicada */}
                 </CardContent>
               </Card>
             ))

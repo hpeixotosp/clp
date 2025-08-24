@@ -915,137 +915,138 @@ export default function PROADPage() {
                       {/* Informações secundárias */}
                       <div className="flex items-center justify-between text-sm text-muted-foreground border-t pt-4">
                         <span className="font-medium">Data de Cadastro: {format(new Date(proad.dataCadastro), "dd/MM/yyyy")}</span>
+                        
+                        {/* Botões de ação na mesma linha */}
+                        <div className="flex gap-2 items-center">
+                          {/* Botão de Histórico */}
+                          {proad.historicoAndamentos && proad.historicoAndamentos.length > 0 && (
+                            <Dialog>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <DialogTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-1 flex items-center justify-center">
+                                      <FileTextIcon className="h-4 w-4 flex-shrink-0" />
+                                    </Button>
+                                  </DialogTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent><p>Ver Histórico de Andamentos</p></TooltipContent>
+                              </Tooltip>
+                              <DialogContent className="max-w-3xl">
+                                <DialogHeader>
+                                  <DialogTitle>Histórico do PROAD {proad.numero}/{proad.ano}</DialogTitle>
+                                  <DialogDescription>Todos os andamentos registrados para este processo.</DialogDescription>
+                                </DialogHeader>
+                                <div className="max-h-[70vh] overflow-y-auto pr-6 py-4">
+                                  <div className="relative pl-12">
+                                    {/* Linha vertical */}
+                                    <div className="absolute left-12 top-0 bottom-0 w-0.5 bg-border"></div>
+                                  
+                                  <ul className="space-y-8">
+                                    {proad.historicoAndamentos.map((andamento, index) => (
+                                      <li key={andamento.id} className="relative group">
+                                        {/* Ponto na timeline */}
+                                        <div className="absolute -left-[42px] top-1 h-8 w-8 bg-primary rounded-full flex items-center justify-center ring-4 ring-background">
+                                          <FileTextIcon className="h-3 w-3 text-primary-foreground flex-shrink-0" />
+                                        </div>
+                                        
+                                        <div className="ml-12">
+                                          {editingAndamentoId === andamento.id ? (
+                                            // Modo de edição
+                                            <div className="space-y-3">
+                                              <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-2">
+                                                  <Input
+                                                    type="date"
+                                                    value={format(editingAndamentoData.data, "yyyy-MM-dd")}
+                                                    onChange={(e) => {
+                                                      const newDate = new Date(e.target.value);
+                                                      newDate.setHours(editingAndamentoData.data.getHours(), editingAndamentoData.data.getMinutes());
+                                                      setEditingAndamentoData(prev => ({ ...prev, data: newDate }));
+                                                    }}
+                                                    className="w-auto"
+                                                  />
+                                                  <Input
+                                                    type="time"
+                                                    value={format(editingAndamentoData.data, "HH:mm")}
+                                                    onChange={(e) => {
+                                                      const [hours, minutes] = e.target.value.split(':');
+                                                      const newData = new Date(editingAndamentoData.data);
+                                                      newData.setHours(parseInt(hours), parseInt(minutes));
+                                                      setEditingAndamentoData(prev => ({ ...prev, data: newData }));
+                                                    }}
+                                                    className="w-20"
+                                                  />
+                                                </div>
+                                                <div className="flex gap-1">
+                                                  <Button size="sm" onClick={handleSaveAndamento} className="h-6 w-6 p-0">
+                                                    <Check className="h-3 w-3" />
+                                                  </Button>
+                                                  <Button variant="ghost" size="sm" onClick={handleCancelEditAndamento} className="h-6 w-6 p-0">
+                                                    <X className="h-3 w-3" />
+                                                  </Button>
+                                                </div>
+                                              </div>
+                                              <Textarea
+                                                value={editingAndamentoData.descricao}
+                                                onChange={(e) => setEditingAndamentoData(prev => ({ ...prev, descricao: e.target.value }))}
+                                                className="min-h-[80px]"
+                                                placeholder="Descreva o andamento..."
+                                              />
+                                            </div>
+                                          ) : (
+                                            // Modo de visualização
+                                            <>
+                                              <div className="flex items-center justify-between mb-1">
+                                                <p className="font-semibold text-sm">{format(new Date(andamento.data), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+                                                <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                    <Button 
+                                                      variant="ghost" 
+                                                      size="sm" 
+                                                      className="h-6 w-6 p-0"
+                                                      onClick={() => handleEditAndamento(andamento)}
+                                                    >
+                                                      <Edit className="h-3 w-3" />
+                                                    </Button>
+                                                  </TooltipTrigger>
+                                                  <TooltipContent>
+                                                    <p>Editar andamento</p>
+                                                  </TooltipContent>
+                                                </Tooltip>
+                                              </div>
+                                              <p className="text-muted-foreground whitespace-pre-wrap">{andamento.descricao}</p>
+                                            </>
+                                          )}
+                                        </div>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="outline" size="sm" onClick={() => handleEdit(proad)} className="h-8 w-8 p-0">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Editar PROAD</p></TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="outline" size="sm" onClick={() => handleDelete(proad.id!)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Excluir PROAD</p></TooltipContent>
+                          </Tooltip>
+                        </div>
                       </div>
                     </div>
                     
-                    {/* Botões de ação */}
-                    <div className="flex gap-2 items-center justify-end mt-4 pt-4 border-t">
-                      {/* Botão de Histórico */}
-                      {proad.historicoAndamentos && proad.historicoAndamentos.length > 0 && (
-                        <Dialog>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <DialogTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-1 flex items-center justify-center">
-                                  <FileTextIcon className="h-4 w-4 flex-shrink-0" />
-                                </Button>
-                              </DialogTrigger>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Ver Histórico de Andamentos</p></TooltipContent>
-                          </Tooltip>
-                          <DialogContent className="max-w-3xl">
-                            <DialogHeader>
-                              <DialogTitle>Histórico do PROAD {proad.numero}/{proad.ano}</DialogTitle>
-                              <DialogDescription>Todos os andamentos registrados para este processo.</DialogDescription>
-                            </DialogHeader>
-                                                          <div className="max-h-[70vh] overflow-y-auto pr-6 py-4">
-                                <div className="relative pl-12">
-                                  {/* Linha vertical */}
-                                  <div className="absolute left-12 top-0 bottom-0 w-0.5 bg-border"></div>
-                                
-                                <ul className="space-y-8">
-                                  {proad.historicoAndamentos.map((andamento, index) => (
-                                    <li key={andamento.id} className="relative group">
-                                      {/* Ponto na timeline */}
-                                      <div className="absolute -left-[42px] top-1 h-8 w-8 bg-primary rounded-full flex items-center justify-center ring-4 ring-background">
-                                        <FileTextIcon className="h-3 w-3 text-primary-foreground flex-shrink-0" />
-                                      </div>
-                                      
-                                      <div className="ml-12">
-                                        {editingAndamentoId === andamento.id ? (
-                                          // Modo de edição
-                                          <div className="space-y-3">
-                                            <div className="flex items-center justify-between mb-2">
-                                              <div className="flex items-center gap-2">
-                                                <Input
-                                                  type="date"
-                                                  value={format(editingAndamentoData.data, "yyyy-MM-dd")}
-                                                  onChange={(e) => {
-                                                    const newDate = new Date(e.target.value);
-                                                    newDate.setHours(editingAndamentoData.data.getHours(), editingAndamentoData.data.getMinutes());
-                                                    setEditingAndamentoData(prev => ({ ...prev, data: newDate }));
-                                                  }}
-                                                  className="w-auto"
-                                                />
-                                                <Input
-                                                  type="time"
-                                                  value={format(editingAndamentoData.data, "HH:mm")}
-                                                  onChange={(e) => {
-                                                    const [hours, minutes] = e.target.value.split(':');
-                                                    const newData = new Date(editingAndamentoData.data);
-                                                    newData.setHours(parseInt(hours), parseInt(minutes));
-                                                    setEditingAndamentoData(prev => ({ ...prev, data: newData }));
-                                                  }}
-                                                  className="w-20"
-                                                />
-                                              </div>
-                                              <div className="flex gap-1">
-                                                <Button size="sm" onClick={handleSaveAndamento} className="h-6 w-6 p-0">
-                                                  <Check className="h-3 w-3" />
-                                                </Button>
-                                                <Button variant="ghost" size="sm" onClick={handleCancelEditAndamento} className="h-6 w-6 p-0">
-                                                  <X className="h-3 w-3" />
-                                                </Button>
-                                              </div>
-                                            </div>
-                                            <Textarea
-                                              value={editingAndamentoData.descricao}
-                                              onChange={(e) => setEditingAndamentoData(prev => ({ ...prev, descricao: e.target.value }))}
-                                              className="min-h-[80px]"
-                                              placeholder="Descreva o andamento..."
-                                            />
-                                          </div>
-                                        ) : (
-                                          // Modo de visualização
-                                          <>
-                                            <div className="flex items-center justify-between mb-1">
-                                              <p className="font-semibold text-sm">{format(new Date(andamento.data), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
-                                                                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                className="h-6 w-6 p-0"
-                                                onClick={() => handleEditAndamento(andamento)}
-                                              >
-                                                <Edit className="h-3 w-3" />
-                                              </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              <p>Editar andamento</p>
-                                            </TooltipContent>
-                                          </Tooltip>
-                                            </div>
-                                            <p className="text-muted-foreground whitespace-pre-wrap">{andamento.descricao}</p>
-                                          </>
-                                        )}
-                                      </div>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                      )}
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(proad)} className="h-8 w-8 p-0">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Editar PROAD</p></TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="outline" size="sm" onClick={() => handleDelete(proad.id!)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p>Excluir PROAD</p></TooltipContent>
-                      </Tooltip>
-                    </div>
+                    {/* Remover a seção de botões de ação que estava duplicada */}
                   </CardContent>
                 </Card>
               ))

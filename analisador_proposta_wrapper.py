@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Wrapper robusto para o Analisador de Propostas
-Garante compatibilidade com Vercel e tratamento de erros robusto
+Garante compatibilidade com Railway e tratamento de erros robusto
 """
 
 import os
@@ -16,9 +16,6 @@ def main():
         sys.stdout.reconfigure(encoding='utf-8')
     if hasattr(sys.stderr, 'reconfigure'):
         sys.stderr.reconfigure(encoding='utf-8')
-    
-    # Verificar se estamos em produção
-    is_production = os.environ.get('NODE_ENV') == 'production'
     
     # Testar comandos Python disponíveis
     python_cmds = ['python3', 'python', '/usr/bin/python3', '/usr/bin/python']
@@ -64,17 +61,28 @@ def main():
             encoding='utf-8'
         )
         
-        # Imprimir saída
+        # Imprimir logs de debug no stderr (não interferem com a resposta)
         if result.stdout:
             print("STDOUT:", result.stdout, file=sys.stderr)
         if result.stderr:
             print("STDERR:", result.stderr, file=sys.stderr)
         
-        # Se executou com sucesso, imprimir resultado
+        # Se executou com sucesso, imprimir resultado JSON no stdout
         if result.returncode == 0:
-            print(result.stdout)
+            # Verificar se a saída é JSON válido
+            try:
+                # Tentar fazer parse do JSON para validar
+                json.loads(result.stdout)
+                # Se chegou aqui, é JSON válido - imprimir no stdout
+                print(result.stdout)
+            except json.JSONDecodeError:
+                # Se não for JSON válido, retornar erro
+                print(json.dumps({"error": "Script Python não retornou JSON válido", "output": result.stdout}))
+                sys.exit(1)
         else:
-            print(json.dumps({"error": f"Erro na execução: {result.stderr}"}))
+            # Se falhou, retornar erro com detalhes
+            error_msg = result.stderr if result.stderr else "Erro desconhecido na execução"
+            print(json.dumps({"error": f"Erro na execução: {error_msg}"}))
         
         # Retornar código de saída
         sys.exit(result.returncode)

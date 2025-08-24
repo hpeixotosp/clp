@@ -39,7 +39,7 @@ def main():
         sys.exit(1)
     
     # Caminho para o script principal
-    script_path = os.path.join(os.path.dirname(__file__), 'analisador_tr_etp_safe.py')
+    script_path = os.path.join(os.path.dirname(__file__), 'analisador_tr_etp.py')
     
     # Verificar se o script existe
     if not os.path.exists(script_path):
@@ -71,25 +71,19 @@ def main():
         if result.stderr:
             print("STDERR:", result.stderr, file=sys.stderr)
         
-        # Se executou com sucesso, filtrar emojis através do limpa_emojis.py
+        # Se executou com sucesso, fazer limpeza seletiva preservando caracteres especiais
         if result.returncode == 0:
-            limpa_script = os.path.join(os.path.dirname(__file__), 'limpa_emojis.py')
-            if os.path.exists(limpa_script):
-                print("✓ Executando limpeza de emojis", file=sys.stderr)
-                limpa_cmd = [python_cmd, limpa_script]
-                limpa_result = subprocess.run(
-                    limpa_cmd,
-                    input=result.stdout,
-                    capture_output=True,
-                    text=True,
-                    encoding='ascii',
-                    errors='ignore'
-                )
-                print(limpa_result.stdout)
-            else:
-                # Se não tiver o limpa_emojis, fazer limpeza básica
-                output_limpo = result.stdout.encode('ascii', errors='ignore').decode('ascii')
-                print(output_limpo)
+            # Limpeza seletiva: remover apenas emojis e símbolos indesejados
+            import re
+            
+            # Remover emojis específicos
+            output_limpo = re.sub(r'[🔴🔵🟢✅❌🚀📄🔧📊📝🔄🤖📤📋🎯]', '', result.stdout)
+            
+            # Remover outros símbolos unicode desnecessários, mas preservar caracteres latinos
+            output_limpo = re.sub(r'[^\x00-\x7F\u00A0-\u017F\u00C0-\u00FF\u0100-\u017F]+', '', output_limpo)
+            
+            # Garantir que caracteres especiais do português sejam preservados
+            print(output_limpo)
         else:
             print(json.dumps({"error": f"Erro na execução: {result.stderr}", "results": []}))
         

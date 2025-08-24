@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     
     // Adicionar pontos de foco se fornecidos
     if (focusPoints) {
-      command += ` --focus-points "${focusPoints}"`;
+      command += ` --focus "${focusPoints}"`;
     }
     
     console.log('🚀 Executando comando Python:');
@@ -134,8 +134,14 @@ export async function POST(request: NextRequest) {
     }
     
     try {
-      // Limpar caracteres não ASCII do JSON antes de fazer parse
-      const cleanJsonString = jsonString.replace(/[^\x00-\x7F]+/g, '');
+      // Limpeza seletiva: remover apenas emojis e símbolos indesejados, preservando caracteres especiais do português
+      let cleanJsonString = jsonString;
+      
+      // Remover emojis específicos
+      cleanJsonString = cleanJsonString.replace(/[🔴🔵🟢✅❌🚀📄🔧📊📝🔄🤖📤📋🎯]/g, '');
+      
+      // Remover outros símbolos unicode desnecessários, mas preservar caracteres latinos
+      cleanJsonString = cleanJsonString.replace(/[^\x00-\x7F\u00A0-\u017F\u00C0-\u00FF\u0100-\u017F]/g, '');
       
       // Parse do JSON
       const result = JSON.parse(cleanJsonString);

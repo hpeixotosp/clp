@@ -20,15 +20,16 @@ import pandas as pd
 import google.generativeai as genai
 import os
 
-# Configurar encoding ASCII - SOLUÇÃO DEFINITIVA
+# Configurar encoding UTF-8 para preservar caracteres especiais do português
 import os
-os.environ['PYTHONIOENCODING'] = 'ascii'
-os.environ['PYTHONLEGACYWINDOWSSTDIO'] = '1'
+os.environ['PYTHONIOENCODING'] = 'utf-8'
 
-# Forçar encoding ASCII para stdout e stderr
+# Configurar stdout e stderr para UTF-8
 import sys
-sys.stdout = open(sys.stdout.fileno(), mode='w', encoding='ascii', errors='ignore')
-sys.stderr = open(sys.stderr.fileno(), mode='w', encoding='ascii', errors='ignore')
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
 
 class AnalisadorTREtp:
     def __init__(self, api_key: str):
@@ -82,64 +83,42 @@ class AnalisadorTREtp:
 ATENÇÃO CRÍTICA: VOCÊ É OBRIGADO A SEGUIR ESTAS REGRAS SEM EXCEÇÃO
 
 REGRA 1: NUNCA, EM HIPÓTESE ALGUMA, USE EMOJIS, SÍMBOLOS OU CARACTERES ESPECIAIS
-REGRA 2: USE APENAS LETRAS (a-z, A-Z), NÚMEROS (0-9), ESPAÇOS E PONTUAÇÃO BÁSICA
+REGRA 2: USE APENAS LETRAS (a-z, A-Z, ç, ã, õ, á, é, í, ó, ú), NÚMEROS (0-9), ESPAÇOS E PONTUAÇÃO BÁSICA
 REGRA 3: SE VOCÊ USAR QUALQUER EMOJI, A RESPOSTA SERÁ REJEITADA
 REGRA 4: SE VOCÊ USAR QUALQUER SÍMBOLO ESPECIAL, A RESPOSTA SERÁ REJEITADA
 REGRA 5: USE APENAS TEXTO SIMPLES E DIRETO
+REGRA 6: PRESERVE TODOS OS CARACTERES ESPECIAIS DO PORTUGUÊS (ç, ã, õ, á, é, í, ó, ú)
 
 INSTRUÇÕES TÉCNICAS:
 - NÃO USE 🔴, 🔵, 🟢, ✅, ❌, 🚀, 📄, 🔧, 📊, 📝, 🔄, 🤖, 📤, 📋, 🎯
-- NÃO USE QUALQUER CARACTERE UNICODE
-- USE APENAS ASCII BÁSICO
+- NÃO USE QUALQUER CARACTERE UNICODE DESNECESSÁRIO
+- USE APENAS CARACTERES LATINOS BÁSICOS + CARACTERES ESPECIAIS DO PORTUGUÊS
 - SEJA DIRETO E OBJETIVO
 - NÃO ADICIONE FORMATAÇÃO EXTRA
+- PRESERVE ACENTOS E CEDILHAS CORRETAMENTE
 
 ANÁLISE DO DOCUMENTO:
 TIPO: {tipo_documento.upper()}
 PONTOS DE FOCO: {pontos_foco if pontos_foco else "Análise completa do documento"}
 
-TEXTO DO DOCUMENTO:
-{texto}
+CONTEXTO DO DOCUMENTO:
+{texto[:2000]}{"..." if len(texto) > 2000 else ""}
 
 TABELAS EXTRAÍDAS:
-{tabelas_csv}
+{tabelas_csv[:1000] if tabelas_csv else "Nenhuma tabela encontrada"}
 
-PROTOCOLO DE ANÁLISE:
-1. Analise o documento seguindo rigorosamente as regras estabelecidas
-2. Formate a saída EXATAMENTE como o JSON especificado
-3. Para itens de "CONFORMIDADE", inclua APENAS os campos "category" e "description"
-4. Para "NÃO CONFORMIDADE" e "SUGESTÃO DE MELHORIA", inclua TODOS os campos: "category", "description", "legalBasis", "recommendation", e "potentialImpact"
-5. NÃO inclua NENHUM texto, formatação extra, emojis, ou caracteres especiais fora do JSON
-6. A resposta DEVE ser um JSON válido e nada mais
-7. NÃO USE EMOJIS EM NENHUMA CIRCUNSTÂNCIA
-8. USE APENAS texto simples e caracteres ASCII básicos
-9. A resposta deve ser 100% compatível com encoding ASCII
+INSTRUÇÕES ESPECÍFICAS:
+1. Analise a conformidade legal do documento
+2. Identifique possíveis problemas ou melhorias
+3. Forneça recomendações práticas
+4. Use linguagem técnica mas acessível
+5. PRESERVE TODOS OS CARACTERES ESPECIAIS DO PORTUGUÊS
+6. NÃO USE EMOJIS OU SÍMBOLOS
 
-FORMATO DE RESPOSTA (JSON):
-{{
-  "results": [
-    {{
-      "sectionTitle": "Título da Seção Analisada",
-      "findings": [
-        {{
-          "category": "CONFORMIDADE",
-          "description": "Este item está em conformidade com a legislação vigente."
-        }},
-        {{
-          "category": "NÃO CONFORMIDADE",
-          "description": "Descrição detalhada do apontamento...",
-          "legalBasis": "Fundamentação legal...",
-          "recommendation": "Recomendação acionável...",
-          "potentialImpact": "Impacto potencial..."
-        }}
-      ]
-    }}
-  ]
-}}
-
-LEMBRE-SE: SEM EMOJIS, SEM SÍMBOLOS, APENAS TEXTO ASCII SIMPLES!
+FORMATO DE RESPOSTA:
+Responda em português brasileiro, preservando todos os acentos e caracteres especiais.
+Seja objetivo e técnico, mas mantenha a clareza.
 """
-        
         return prompt_base
     
     def analisar_documento(self, texto: str, tabelas_csv: str, tipo_documento: str, pontos_foco: str = "") -> Dict:
@@ -248,21 +227,22 @@ def main():
         )
         
         # Retornar resultado
-        resultado_json = json.dumps(resultado, ensure_ascii=True, separators=(',', ':'), default=str)
+        resultado_json = json.dumps(resultado, ensure_ascii=False, separators=(',', ':'), default=str)
         
-        # LIMPEZA RADICAL FINAL DE EMOJIS - SOLUÇÃO DEFINITIVA
+        # LIMPEZA SELETIVA: remover apenas emojis e símbolos indesejados, preservando caracteres especiais do português
         import re
-        resultado_limpo = re.sub(r'[^\x00-\x7F]+', '', resultado_json)
         
-        # Limpeza adicional de emojis específicos
-        resultado_limpo = re.sub(r'[🔴🔵🟢✅❌🚀📄🔧📊📝🔄🤖📤📋🎯]', '', resultado_limpo)
+        # Remover emojis específicos
+        resultado_limpo = re.sub(r'[🔴🔵🟢✅❌🚀📄🔧📊📝🔄🤖📤📋🎯]', '', resultado_json)
         
-        # LIMPEZA FINAL: remover QUALQUER caractere restante
-        resultado_final = re.sub(r'[^\x00-\x7F]+', '', resultado_limpo)
+        # Remover outros símbolos unicode desnecessários, mas preservar caracteres latinos
+        resultado_limpo = re.sub(r'[^\x00-\x7F\u00A0-\u017F\u00C0-\u00FF\u0100-\u017F]+', '', resultado_limpo)
         
-        # Forçar encoding ASCII
-        resultado_ascii = resultado_final.encode('ascii', 'ignore').decode('ascii')
-        print(resultado_ascii)
+        # Garantir que caracteres especiais do português sejam preservados
+        resultado_final = resultado_limpo
+        
+        # Imprimir resultado preservando encoding UTF-8
+        print(resultado_final)
         
     except Exception as e:
         print(json.dumps({

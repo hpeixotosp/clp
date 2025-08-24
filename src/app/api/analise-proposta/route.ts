@@ -59,15 +59,31 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Modo de operação inválido' }, { status: 400 });
         }
         
+        console.log('Executando comando:', command);
+        
         const { stdout, stderr } = await execAsync(command);
 
+        // Logs de debug não são erros - apenas informativos
         if (stderr) {
-          console.error('Erro do Python:', stderr);
-          return NextResponse.json({ error: `Erro no script Python: ${stderr}` }, { status: 500 });
+            console.log('Logs de debug do Python:', stderr);
         }
         
-        const result = JSON.parse(stdout);
-        return NextResponse.json(result);
+        // Verificar se stdout contém JSON válido
+        if (!stdout || stdout.trim() === '') {
+            return NextResponse.json({ error: 'Script Python não retornou dados' }, { status: 500 });
+        }
+        
+        try {
+            const result = JSON.parse(stdout);
+            return NextResponse.json(result);
+        } catch (parseError) {
+            console.error('Erro ao fazer parse do JSON:', parseError);
+            console.error('Saída do Python:', stdout);
+            return NextResponse.json({ 
+                error: 'Resposta inválida do script Python',
+                details: stdout.substring(0, 500) // Primeiros 500 caracteres para debug
+            }, { status: 500 });
+        }
 
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Erro interno do servidor';

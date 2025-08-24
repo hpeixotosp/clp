@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Analisador de TR/ETP - VERSÃO SEGURA SEM EMOJIS
+Analisador de TR/ETP - VERSÃO SEGURA PRESERVANDO CARACTERES ESPECIAIS
 Sistema de análise de Termos de Referência e Estudos Técnicos Preliminares
 """
 
@@ -13,8 +13,14 @@ import re
 import argparse
 from pathlib import Path
 
-# Forçar encoding ASCII
-os.environ['PYTHONIOENCODING'] = 'ascii'
+# Configurar encoding UTF-8 para preservar caracteres especiais do português
+os.environ['PYTHONIOENCODING'] = 'utf-8'
+
+# Configurar stdout e stderr para UTF-8
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
 
 # Importações específicas
 try:
@@ -83,9 +89,10 @@ class AnalisadorTREtp:
 ATENÇÃO CRÍTICA: VOCÊ É OBRIGADO A SEGUIR ESTAS REGRAS SEM EXCEÇÃO
 
 REGRA 1: NUNCA USE EMOJIS OU SÍMBOLOS ESPECIAIS
-REGRA 2: USE APENAS LETRAS (a-z, A-Z), NÚMEROS (0-9), ESPAÇOS E PONTUAÇÃO BÁSICA
-REGRA 3: CATEGORIAS DEVEM SER APENAS: "CONFORMIDADE", "NAO CONFORMIDADE", "SUGESTAO DE MELHORIA"
-REGRA 4: NÃO USE QUALQUER CARACTERE UNICODE ALÉM DO ASCII BÁSICO
+REGRA 2: USE APENAS LETRAS (a-z, A-Z, ç, ã, õ, á, é, í, ó, ú), NÚMEROS (0-9), ESPAÇOS E PONTUAÇÃO BÁSICA
+REGRA 3: CATEGORIAS DEVEM SER APENAS: "CONFORMIDADE", "NÃO CONFORMIDADE", "SUGESTÃO DE MELHORIA"
+REGRA 4: PRESERVE TODOS OS CARACTERES ESPECIAIS DO PORTUGUÊS (ç, ã, õ, á, é, í, ó, ú)
+REGRA 5: NÃO USE QUALQUER CARACTERE UNICODE DESNECESSÁRIO
 
 ANÁLISE DO DOCUMENTO:
 TIPO: {tipo_documento.upper()}
@@ -108,7 +115,7 @@ FORMATO DE RESPOSTA (JSON):
           "description": "Este item está em conformidade com a legislação vigente."
         }},
         {{
-          "category": "NAO CONFORMIDADE",
+          "category": "NÃO CONFORMIDADE",
           "description": "Descrição detalhada do apontamento...",
           "legalBasis": "Fundamentação legal...",
           "recommendation": "Recomendação acionável...",
@@ -119,26 +126,28 @@ FORMATO DE RESPOSTA (JSON):
   ]
 }}
 
-LEMBRE-SE: SEM EMOJIS, SEM SÍMBOLOS, APENAS TEXTO ASCII SIMPLES!
+LEMBRE-SE: SEM EMOJIS, SEM SÍMBOLOS, MAS PRESERVE CARACTERES ESPECIAIS DO PORTUGUÊS!
 """
             
             # Enviar prompt para o modelo
             response = self.modelo.generate_content(prompt_base)
             
-            # Tentar extrair JSON da resposta
-            response_ascii = response.text.encode('ascii', 'ignore').decode('ascii')
+            # Limpeza seletiva: remover apenas emojis e símbolos indesejados, preservando caracteres especiais
+            response_text = response.text
             
-            # Limpar qualquer caractere não ASCII
-            response_clean = re.sub(r'[^\x00-\x7F]+', '', response_ascii)
+            # Remover emojis específicos
+            response_clean = re.sub(r'[🔴🔵🟢✅❌🚀📄🔧📊📝🔄🤖📤📋🎯]', '', response_text)
+            
+            # Remover outros símbolos unicode desnecessários, mas preservar caracteres latinos
+            response_clean = re.sub(r'[^\x00-\x7F\u00A0-\u017F\u00C0-\u00FF\u0100-\u017F]+', '', response_clean)
             
             # Buscar JSON na resposta
             json_match = re.search(r'\{.*\}', response_clean, re.DOTALL)
             if json_match:
                 try:
-                    # Limpar novamente antes de fazer parse
+                    # Fazer parse do JSON preservando caracteres especiais
                     json_text = json_match.group()
-                    json_text_clean = re.sub(r'[^\x00-\x7F]+', '', json_text)
-                    return json.loads(json_text_clean)
+                    return json.loads(json_text)
                 except json.JSONDecodeError:
                     # Se falhar, retornar resposta formatada manualmente
                     return {
@@ -147,7 +156,7 @@ LEMBRE-SE: SEM EMOJIS, SEM SÍMBOLOS, APENAS TEXTO ASCII SIMPLES!
                                 "sectionTitle": "Erro de Processamento",
                                 "findings": [
                                     {
-                                        "category": "NAO CONFORMIDADE",
+                                        "category": "NÃO CONFORMIDADE",
                                         "description": "Não foi possível processar a resposta da IA em formato JSON.",
                                         "legalBasis": "N/A",
                                         "recommendation": "Tente novamente ou contate o suporte.",
