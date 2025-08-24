@@ -22,9 +22,11 @@ export async function getDatabase(): Promise<Database> {
     return db;
   }
   
-  // Detectar se estamos no Vercel (ambiente de produção)
-  const isVercel = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
-  const dbPath = isVercel ? ':memory:' : path.join(process.cwd(), 'trt21.db');
+  // Detectar ambiente de produção (Vercel ou Railway)
+  const isProduction = process.env.VERCEL === '1' || process.env.RAILWAY_ENVIRONMENT === 'production' || process.env.NODE_ENV === 'production';
+  // No Railway, usar SQLite persistente ao invés de memória
+  const isRailway = process.env.RAILWAY_ENVIRONMENT !== undefined;
+  const dbPath = isProduction && !isRailway ? ':memory:' : path.join(process.cwd(), 'trt21.db');
   
   try {
     const sqlite3 = await import('sqlite3');

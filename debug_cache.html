@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Cache - TIC</title>
+</head>
+<body>
+    <h1>Debug Cache</h1>
+    <button onclick="clearCache()">Limpar Cache e Recarregar</button>
+    <button onclick="checkData()">Verificar Dados da API</button>
+    <div id="result"></div>
+    
+    <script>
+        function clearCache() {
+            // Limpar localStorage e sessionStorage
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Forçar reload sem cache
+            window.location.reload(true);
+        }
+        
+        async function checkData() {
+            try {
+                const response = await fetch('/api/pontos-eletronicos');
+                const data = await response.json();
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                document.getElementById('result').innerHTML = 'Erro: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
