@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+.next
+.git
+.gitignore
+README.md
+Dockerfile
+.dockerignore
+.env
+.env.local
+.env.production
+.env.development
+trt21.db
+trt21-clp.db
+/temp_pdfs/
+/temp/
+*.log
