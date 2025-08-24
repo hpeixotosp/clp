@@ -1,10 +1,9 @@
 # Use a imagem oficial do Node.js 20
 FROM node:20-alpine
 
-# Instale as dependências de build, Python e pip.
-# build-base é essencial para compilar pacotes C.
-# python3-dev contém os headers necessários.
-RUN apk add --no-cache build-base python3-dev py3-pip
+# Instale as dependências de build, Python, pip e os headers do Linux
+# psutil e outros pacotes precisam do linux-headers para compilar.
+RUN apk add --no-cache build-base python3-dev py3-pip linux-headers
 
 # Crie o diretório de trabalho
 WORKDIR /app
