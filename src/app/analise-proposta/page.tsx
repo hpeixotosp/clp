@@ -219,8 +219,16 @@ export default function AnalisePropostaPage() {
   };
 
   const handleAnalyzeItem = async () => {
-    if (!trFile || proposalFiles.length === 0 || !selectedItem) {
-      setError("Por favor, selecione um item e envie a(s) proposta(s) para análise.");
+    if (!selectedItem) {
+      setError("Por favor, selecione um item para análise antes de continuar.");
+      return;
+    }
+    if (!trFile) {
+      setError("Termo de Referência não encontrado. Por favor, reinicie o processo.");
+      return;
+    }
+    if (proposalFiles.length === 0) {
+      setError("Por favor, envie pelo menos um documento da proposta para análise.");
       return;
     }
     setIsLoading(true);
@@ -367,17 +375,28 @@ export default function AnalisePropostaPage() {
                             </div>
                         </div>
 
-                        {/* Coluna 2: Upload da Proposta e Botão de Ação */}
+                        {/* Coluna 2: Upload da Proposta */}
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="proposal-upload" className="text-sm font-medium">Selecione um item e envie o(s) documento(s) da proposta para análise</Label>
-                                <FileUploadBox
-                                    id="proposal-upload"
-                                    files={proposalFiles}
-                                    onUpload={handleProposalUpload}
-                                    onRemove={handleProposalRemove}
-                                    disabled={!selectedItem || isLoading}
-                                />
+                                <Label htmlFor="proposal-upload" className="text-sm font-medium">Envie o(s) documento(s) da proposta</Label>
+                                {!selectedItem && (
+                                    <div className="p-4 border-2 border-dashed border-muted-foreground/25 rounded-lg bg-muted/10">
+                                        <div className="text-center text-muted-foreground">
+                                            <FileUp className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                                            <p className="text-sm font-medium">Selecione um item primeiro</p>
+                                            <p className="text-xs mt-1">Você deve escolher um item para análise antes de enviar os documentos da proposta.</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {selectedItem && (
+                                    <FileUploadBox
+                                        id="proposal-upload"
+                                        files={proposalFiles}
+                                        onUpload={handleProposalUpload}
+                                        onRemove={handleProposalRemove}
+                                        disabled={isLoading}
+                                    />
+                                )}
                             </div>
                         </div>
                     </div>
@@ -391,20 +410,38 @@ export default function AnalisePropostaPage() {
                                         <span className="text-muted-foreground">Analisando conformidade...</span>
                                         <span className="text-muted-foreground">Aguarde</span>
                                     </div>
-                                    <Progress value={analysisProgress} className="h-2" />
+                                    <Progress value={75} className="h-2" />
                                     <p className="text-xs text-muted-foreground text-center">{loadingMessage}</p>
                                 </div>
                             )}
                             <div className="flex justify-center">
                                 <Button 
                                     onClick={handleAnalyzeItem} 
-                                    disabled={isLoading} 
+                                    disabled={isLoading || !selectedItem || proposalFiles.length === 0} 
                                     className="min-w-[200px] h-11"
                                     size="lg"
                                 >
                                     {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileScan className="mr-2 h-4 w-4" />}
                                     {isLoading ? 'Analisando Item...' : 'Analisar Item'}
                                 </Button>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Mensagem quando item não está selecionado */}
+                    {!selectedItem && (
+                        <div className="pt-4 border-t">
+                            <div className="text-center text-muted-foreground">
+                                <p className="text-sm">👆 Selecione um item acima para continuar com a análise</p>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Mensagem quando item está selecionado mas não há arquivos */}
+                    {selectedItem && proposalFiles.length === 0 && (
+                        <div className="pt-4 border-t">
+                            <div className="text-center text-muted-foreground">
+                                <p className="text-sm">📄 Envie os documentos da proposta para iniciar a análise</p>
                             </div>
                         </div>
                     )}
