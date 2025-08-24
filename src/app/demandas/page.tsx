@@ -197,7 +197,6 @@ export default function DemandasPage() {
 
   const handleCancelEditAndamento = () => {
     setEditingAndamentoId(null);
-    setEditingAndamentoData({ descricao: '', data: new Date() });
   };
 
   const handleSaveAndamento = async () => {
@@ -215,7 +214,6 @@ export default function DemandasPage() {
       
       if (response.ok) {
         setEditingAndamentoId(null);
-        setEditingAndamentoData({ descricao: '', data: new Date() });
         await carregarDemandas(); // Recarregar para mostrar as mudanças
       } else {
         throw new Error('Falha ao salvar andamento');

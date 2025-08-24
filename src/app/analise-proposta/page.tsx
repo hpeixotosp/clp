@@ -130,6 +130,7 @@ export default function AnalisePropostaPage() {
   const [proposalFiles, setProposalFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
+  const [analysisProgress, setAnalysisProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   
   const [identifiedItems, setIdentifiedItems] = useState<string[]>([]);
@@ -213,6 +214,7 @@ export default function AnalisePropostaPage() {
       setError(errorMessage);
     } finally {
       setIsLoading(false);
+      setTimeout(() => setAnalysisProgress(0), 2000);
     }
   };
 
@@ -222,6 +224,7 @@ export default function AnalisePropostaPage() {
       return;
     }
     setIsLoading(true);
+    setAnalysisProgress(10);
     setLoadingMessage(`Analisando item: ${selectedItem}...`);
     setError(null);
     try {
@@ -232,14 +235,24 @@ export default function AnalisePropostaPage() {
       proposalFiles.forEach(file => {
           formData.append('proposalFiles', file);
       });
+      
+      // Progresso: enviando dados para análise
+      setAnalysisProgress(30);
 
       const response = await fetch('/api/analise-proposta', { method: 'POST', body: formData });
+      
+      // Progresso: processando análise
+      setAnalysisProgress(70);
       const result: AnalysisResponse = await response.json();
 
       if (!response.ok || result.error) throw new Error(result.error || "Erro ao analisar o item.");
       
+      // Progresso: finalizando análise
+      setAnalysisProgress(90);
+      
       if (result.analysisItems) {
         setAnalysisResult(result.analysisItems);
+        setTimeout(() => setAnalysisProgress(100), 500);
         setStep("3_SHOW_REPORT");
       } else {
         setError("A análise não retornou um resultado válido.");
@@ -357,7 +370,7 @@ export default function AnalisePropostaPage() {
                         {/* Coluna 2: Upload da Proposta e Botão de Ação */}
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="proposal-upload" className="text-sm font-medium">Selecione a(s) Proposta(s) e Documentos</Label>
+                                <Label htmlFor="proposal-upload" className="text-sm font-medium">Selecione um item e envie o(s) documento(s) da proposta para análise</Label>
                                 <FileUploadBox
                                     id="proposal-upload"
                                     files={proposalFiles}
@@ -378,7 +391,7 @@ export default function AnalisePropostaPage() {
                                         <span className="text-muted-foreground">Analisando conformidade...</span>
                                         <span className="text-muted-foreground">Aguarde</span>
                                     </div>
-                                    <Progress value={75} className="h-2" />
+                                    <Progress value={analysisProgress} className="h-2" />
                                     <p className="text-xs text-muted-foreground text-center">{loadingMessage}</p>
                                 </div>
                             )}

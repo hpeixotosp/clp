@@ -309,12 +309,20 @@ class PontoProcessor:
         """Calcula horas trabalhadas para um dia específico"""
         # Verificar se é dia especial (Feriado, Folga, etc.)
         campos = [entry['campo1'], entry['campo2'], entry['campo3'], entry['campo4']]
-        is_especial = any(re.search(r'[a-zA-Z]', campo) for campo in campos)
         
-        if is_especial:
-            # Dia especial: usar C.PRE completo
-            return entry['cpre_minutos'], 'Especial'
-        else:
+        # Verificar se algum campo contém texto (atestado, feriado, etc.)
+        has_text_in_fields = any(re.search(r'[a-zA-Z]', str(campo)) for campo in campos if campo)
+        
+        # Verificar se todos os campos estão vazios ou contêm apenas texto
+        all_empty_or_text = all(not campo or re.search(r'^[a-zA-Z\s]*$', str(campo)) for campo in campos)
+        
+        if has_text_in_fields and entry['cpre_minutos'] > 0:
+            # Dia especial com C.PRE válido: usar C.PRE completo
+            return entry['cpre_minutos'], 'Especial (C.PRE)'
+        elif all_empty_or_text and entry['cpre_minutos'] > 0:
+            # Campos vazios ou só texto, mas há C.PRE: usar C.PRE
+            return entry['cpre_minutos'], 'C.PRE apenas'
+        elif not has_text_in_fields:
             # Dia normal: calcular com regras para registros ausentes
             try:
                 ent1 = self.time_to_minutes(entry['campo1'])
@@ -355,6 +363,9 @@ class PontoProcessor:
                     
             except Exception as e:
                 return 0, 'Erro'
+        else:
+            # Casos onde há texto mas não há C.PRE válido
+            return 0, 'Sem C.PRE válido'
     
     def process_pdf(self, pdf_path: str) -> Dict:
         """Processa um PDF completo e retorna resultados estruturados - SOLUÇÃO DEFINITIVA"""
@@ -570,9 +581,10 @@ class PontoProcessor:
                     if not re.match(r'0[68]:00:00', cpre):
                         cpre = '08:00:00'  # Padrão
                     
-                    # Pular entradas com ATEST, FOLGA, etc.
-                    if any(skip in ent1_sai1.upper() for skip in ['ATEST', 'FOLGA', 'FALTA']):
-                        continue
+                    # Não pular entradas com ATEST, FOLGA, etc. se há C.PRE válido
+                    # Essas entradas devem ser consideradas na jornada mensal
+                    # if any(skip in ent1_sai1.upper() for skip in ['ATEST', 'FOLGA', 'FALTA']):
+                    #     continue
                     
                     entry = {
                         'data': data,

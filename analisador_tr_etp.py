@@ -215,31 +215,59 @@ INSTRUÇÕES ESPECÍFICAS PARA ANÁLISE:
 9. Cite especificamente os artigos da Lei 14.133/2021 e orientações do TCU da base de conhecimento
 10. PRESERVE TODOS OS CARACTERES ESPECIAIS DO PORTUGUÊS
 11. NÃO USE EMOJIS OU SÍMBOLOS
+12. SEJA ABRANGENTE: Analise TODOS os aspectos do documento, incluindo objeto, justificativa, especificações técnicas, critérios de julgamento, qualificação técnica, estimativa de preços, prazos, fiscalização, etc.
+13. GERE MÚLTIPLAS SEÇÕES: Organize a análise em seções específicas como "Objeto e Justificativa", "Especificações Técnicas", "Critérios de Habilitação", "Estimativa de Preços", "Prazos e Cronograma", "Fiscalização e Gestão", etc.
+14. IDENTIFIQUE MÚLTIPLOS PONTOS: Para cada seção, identifique pelo menos 3-5 pontos de análise quando aplicável
+15. SEJA DETALHADO: Não se limite a análises superficiais, aprofunde-se nos aspectos técnicos e legais
 
 FORMATO DE RESPOSTA:
 Responda em português brasileiro, preservando todos os acentos e caracteres especiais.
 Seja objetivo e técnico, mas mantenha a clareza.
+Gere MÚLTIPLAS SEÇÕES com VÁRIOS ITENS cada uma.
 Use o formato JSON com a seguinte estrutura:
 {{
   "results": [
     {{
-      "sectionTitle": "Título da Seção Analisada",
+      "sectionTitle": "Objeto e Justificativa",
       "findings": [
         {{
           "category": "CONFORMIDADE",
-          "description": "Este item está em conformidade com a legislação vigente."
+          "description": "Descrição da conformidade encontrada..."
         }},
         {{
           "category": "NÃO CONFORMIDADE",
-          "description": "Descrição detalhada do apontamento com fundamentação legal específica...",
-          "legalBasis": "Artigo específico da Lei 14.133/2021 ou jurisprudência do TCU...",
-          "recommendation": "Recomendação acionável com sugestão de redação alternativa...",
-          "potentialImpact": "Impacto potencial para a licitação e execução contratual..."
+          "description": "Descrição detalhada do problema...",
+          "legalBasis": "Artigo específico da Lei 14.133/2021...",
+          "recommendation": "Recomendação específica...",
+          "potentialImpact": "Impacto para a licitação..."
+        }}
+      ]
+    }},
+    {{
+      "sectionTitle": "Especificações Técnicas",
+      "findings": [
+        {{
+          "category": "SUGESTÃO",
+          "description": "Sugestão de melhoria técnica...",
+          "recommendation": "Como implementar a melhoria..."
+        }}
+      ]
+    }},
+    {{
+      "sectionTitle": "Critérios de Habilitação",
+      "findings": [
+        {{
+          "category": "NÃO CONFORMIDADE",
+          "description": "Problema nos critérios...",
+          "legalBasis": "Fundamentação legal...",
+          "recommendation": "Correção sugerida..."
         }}
       ]
     }}
   ]
 }}
+
+IMPORTANTE: Gere pelo menos 4-6 seções diferentes e 3-5 itens por seção quando o documento permitir.
 """
         return prompt_base
     
@@ -262,18 +290,14 @@ Use o formato JSON com a seguinte estrutura:
             response = self.model.generate_content(prompt)
             
             # Tentar extrair JSON da resposta
-            # LIMPEZA RADICAL DE EMOJIS - SOLUÇÃO DEFINITIVA
-            response_ascii = response.text.encode('ascii', 'ignore').decode('ascii')
-            
-            # Limpeza RADICAL: remover TODOS os emojis e caracteres especiais
+            # LIMPEZA SELETIVA: preservar caracteres especiais do português
             import re
-            response_clean = re.sub(r'[^\x00-\x7F]+', '', response_ascii)
             
-            # Limpeza adicional de emojis específicos
-            response_clean = re.sub(r'[🔴🔵🟢✅❌🚀📄🔧📊📝🔄🤖📤📋🎯]', '', response_clean)
+            # Remover apenas emojis específicos, preservando acentos e cedilhas
+            response_clean = re.sub(r'[🔴🔵🟢✅❌🚀📄🔧📊📝🔄🤖📤📋🎯]', '', response.text)
             
-            # LIMPEZA FINAL: remover QUALQUER caractere restante
-            response_final = re.sub(r'[^\x00-\x7F]+', '', response_clean)
+            # Remover outros emojis e símbolos unicode desnecessários, mas preservar caracteres latinos
+            response_final = re.sub(r'[^\x00-\x7F\u00A0-\u017F\u00C0-\u00FF\u0100-\u017F]+', '', response_clean)
             
             json_match = re.search(r'\{.*\}', response_final, re.DOTALL)
             if json_match:
@@ -281,9 +305,9 @@ Use o formato JSON com a seguinte estrutura:
                     return json.loads(json_match.group())
                 except json.JSONDecodeError:
                     # Se falhar, retornar resposta formatada manualmente
-                    return self.formatar_resposta_manual(response_ascii)
+                    return self.formatar_resposta_manual(response_final)
             else:
-                return self.formatar_resposta_manual(response_ascii)
+                return self.formatar_resposta_manual(response_final)
                 
         except Exception as e:
             return {
@@ -367,10 +391,7 @@ def main():
         resultado_limpo = re.sub(r'[🔴🔵🟢✅❌🚀📄🔧📊📝🔄🤖📤📋🎯]', '', resultado_json)
         
         # Remover outros símbolos unicode desnecessários, mas preservar caracteres latinos
-        resultado_limpo = re.sub(r'[^\x00-\x7F\u00A0-\u017F\u00C0-\u00FF\u0100-\u017F]+', '', resultado_limpo)
-        
-        # Garantir que caracteres especiais do português sejam preservados
-        resultado_final = resultado_limpo
+        resultado_final = re.sub(r'[^\x00-\x7F\u00A0-\u017F\u00C0-\u00FF\u0100-\u017F]+', '', resultado_limpo)
         
         # Imprimir resultado preservando encoding UTF-8
         print(resultado_final)

@@ -60,18 +60,7 @@ export function TRAnalisarClient() {
     }
 
     setIsAnalyzing(true);
-    setAnalysisProgress(0);
-    
-    // Simular progresso da análise
-    const progressInterval = setInterval(() => {
-      setAnalysisProgress(prev => {
-        if (prev >= 90) {
-          clearInterval(progressInterval);
-          return 90;
-        }
-        return prev + 10;
-      });
-    }, 500);
+    setAnalysisProgress(10); // Progresso inicial
     
     try {
       const formData = new FormData();
@@ -86,15 +75,23 @@ export function TRAnalisarClient() {
         formData.append('focus_points', focusPoints);
       }
 
+      // Progresso: enviando dados para análise
+      setAnalysisProgress(30);
+      
       const response = await fetch('/api/tr-analisar/analyze', {
         method: 'POST',
         body: formData,
       });
+      
+      // Progresso: processando análise
+      setAnalysisProgress(70);
 
       if (response.ok) {
         const data = await response.json();
+        // Progresso: finalizando análise
+        setAnalysisProgress(90);
         setResults(data.results || []);
-        setAnalysisProgress(100);
+        setTimeout(() => setAnalysisProgress(100), 500);
       } else {
         const errorData = await response.json();
         alert(`Erro na análise: ${errorData.error || 'Erro desconhecido'}`);
@@ -102,22 +99,21 @@ export function TRAnalisarClient() {
     } catch (error) {
       alert(`Erro na análise: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     } finally {
-      clearInterval(progressInterval);
       setIsAnalyzing(false);
-      setTimeout(() => setAnalysisProgress(0), 1000);
+      setTimeout(() => setAnalysisProgress(0), 2000);
     }
   };
 
   const getCategoryBadge = (category: string) => {
-    // Limpar emojis e caracteres especiais da categoria
-    const cleanCategory = category.replace(/[^\x00-\x7F]+/g, '').trim();
+    // Preservar caracteres especiais do português
+    const cleanCategory = category.trim();
     
     // Mapear categorias para variantes de badge
-    if (cleanCategory.includes('CONFORMIDADE')) {
+    if (cleanCategory.includes('CONFORMIDADE') && !cleanCategory.includes('NÃO')) {
       return <Badge className="bg-green-100 text-green-800 hover:bg-green-100 border-green-200">{cleanCategory}</Badge>;
-    } else if (cleanCategory.includes('NAO CONFORMIDADE') || cleanCategory.includes('NÃO CONFORMIDADE')) {
+    } else if (cleanCategory.includes('NÃO CONFORMIDADE') || cleanCategory.includes('NAO CONFORMIDADE')) {
       return <Badge className="bg-red-100 text-red-800 hover:bg-red-100 border-red-200">{cleanCategory}</Badge>;
-    } else if (cleanCategory.includes('SUGESTAO') || cleanCategory.includes('SUGESTÃO')) {
+    } else if (cleanCategory.includes('SUGESTÃO') || cleanCategory.includes('SUGESTAO')) {
       return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200">{cleanCategory}</Badge>;
     } else {
       return <Badge variant="secondary">{cleanCategory}</Badge>;
@@ -318,60 +314,76 @@ export function TRAnalisarClient() {
         {/* Coluna Direita: Resultados */}
         <div className="space-y-6">
           {results.length > 0 ? (
-            results.map((section, sectionIndex) => (
-              <Card key={sectionIndex}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    {section.sectionTitle}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {section.findings.map((finding, findingIndex) => (
-                    <div key={findingIndex} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-start gap-3">
-                        {getCategoryBadge(finding.category)}
-                        <div className="flex-1 space-y-2">
-                          <p className="font-medium">{finding.description}</p>
-                          
-                          <div className="grid gap-2 text-sm">
-                            {finding.legalBasis && (
-                              <div className="flex items-start gap-2">
-                                <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                                <div>
-                                  <span className="font-medium text-blue-600">Fundamentação Legal:</span>
-                                  <p className="text-muted-foreground">{finding.legalBasis}</p>
-                                </div>
+            <div className="space-y-4">
+              {/* Cabeçalho dos Resultados */}
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Resultados da Análise</h2>
+                <Badge variant="outline">
+                  {results.reduce((total, section) => total + section.findings.length, 0)} itens analisados
+                </Badge>
+              </div>
+              
+              {/* Container com scroll para muitos resultados */}
+              <div className="max-h-[80vh] overflow-y-auto space-y-4 pr-2">
+                {results.map((section, sectionIndex) => (
+                  <Card key={sectionIndex}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        {section.sectionTitle}
+                        <Badge variant="secondary" className="ml-auto">
+                          {section.findings.length} {section.findings.length === 1 ? 'item' : 'itens'}
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {section.findings.map((finding, findingIndex) => (
+                        <div key={findingIndex} className="border rounded-lg p-4 space-y-3">
+                          <div className="flex items-start gap-3">
+                            {getCategoryBadge(finding.category)}
+                            <div className="flex-1 space-y-2">
+                              <p className="font-medium">{finding.description}</p>
+                              
+                              <div className="grid gap-2 text-sm">
+                                {finding.legalBasis && (
+                                  <div className="flex items-start gap-2">
+                                    <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                      <span className="font-medium text-blue-600">Fundamentação Legal:</span>
+                                      <p className="text-muted-foreground">{finding.legalBasis}</p>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {finding.recommendation && (
+                                  <div className="flex items-start gap-2">
+                                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                      <span className="font-medium text-green-600">Recomendação:</span>
+                                      <p className="text-muted-foreground">{finding.recommendation}</p>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {finding.potentialImpact && (
+                                  <div className="flex items-start gap-2">
+                                    <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                      <span className="font-medium text-orange-600">Impacto:</span>
+                                      <p className="text-muted-foreground">{finding.potentialImpact}</p>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                            
-                            {finding.recommendation && (
-                              <div className="flex items-start gap-2">
-                                <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                                <div>
-                                  <span className="font-medium text-green-600">Recomendação:</span>
-                                  <p className="text-muted-foreground">{finding.recommendation}</p>
-                                </div>
-                              </div>
-                            )}
-                            
-                            {finding.potentialImpact && (
-                              <div className="flex items-start gap-2">
-                                <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                                <div>
-                                  <span className="font-medium text-orange-600">Impacto:</span>
-                                  <p className="text-muted-foreground">{finding.potentialImpact}</p>
-                                </div>
-                              </div>
-                            )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            ))
+                      ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
           ) : (
             <Card>
               <CardHeader>

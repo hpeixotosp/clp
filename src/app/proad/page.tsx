@@ -257,7 +257,6 @@ export default function PROADPage() {
       
       if (response.ok) {
         setEditingAndamentoId(null);
-        setEditingAndamentoData({ descricao: '', data: new Date() });
         await carregarPROADs();
       }
     } catch (error) {
@@ -267,7 +266,6 @@ export default function PROADPage() {
 
   const handleCancelEditAndamento = () => {
     setEditingAndamentoId(null);
-    setEditingAndamentoData({ descricao: '', data: new Date() });
   };
 
   const cancelEdit = () => {

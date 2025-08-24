@@ -108,16 +108,8 @@ export default function TICPage() {
       failedFiles: 0
     });
     
-    // Simular progresso da análise
-    const progressInterval = setInterval(() => {
-      setAnalysisProgress(prev => {
-        if (prev >= 90) {
-          clearInterval(progressInterval);
-          return 90;
-        }
-        return prev + 10;
-      });
-    }, 500);
+    // Progresso inicial
+    setAnalysisProgress(10);
 
     try {
       const formData = new FormData();
@@ -127,10 +119,16 @@ export default function TICPage() {
 
       console.log(`=== PROCESSANDO ${selectedFiles.length} ARQUIVO(S) VIA PYTHON ===`);
 
+      // Progresso: iniciando processamento
+      setAnalysisProgress(30);
+      
       const response = await fetch('/api/process-pdfs', {
         method: 'POST',
         body: formData
       });
+      
+      // Progresso: processamento em andamento
+      setAnalysisProgress(70);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -140,7 +138,11 @@ export default function TICPage() {
       
       if (data.success) {
         console.log('✅ Resultados recebidos do Python:', data);
-        setAnalysisProgress(100); // Definir progresso como 100% quando concluído
+        // Progresso: processando resultados
+        setAnalysisProgress(90);
+        
+        // Simular pequeno delay para mostrar progresso de 90% a 100%
+        setTimeout(() => setAnalysisProgress(100), 500);
         
         // Parse do CSV string para array de objetos
         const csvLines = (data.csvContent || '').split('\n').filter((line: string) => line.trim());
@@ -213,10 +215,9 @@ export default function TICPage() {
         failedFiles: selectedFiles.length
       }));
     } finally {
-      clearInterval(progressInterval);
       setIsProcessing(false);
       setSelectedFiles([]);
-      setTimeout(() => setAnalysisProgress(0), 1000); // Resetar progresso após um atraso
+      setTimeout(() => setAnalysisProgress(0), 2000); // Resetar progresso após um atraso
     }
   };
 
