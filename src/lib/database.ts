@@ -199,12 +199,35 @@ export async function closeDatabase(): Promise<void> {
 export async function salvarPontoEletronico(dados: PontoEletronico): Promise<number> {
   try {
     const db = await getDatabase();
-    const result = await db.run(`
-      INSERT INTO pontos_eletronicos (colaborador, periodo, previsto, realizado, saldo, saldo_minutos, assinatura, arquivo_origem)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `, [dados.colaborador, dados.periodo, dados.previsto, dados.realizado, dados.saldo, dados.saldo_minutos, dados.assinatura, dados.arquivo_origem]);
-    console.log('✅ Ponto eletrônico salvo com sucesso');
-    return result.lastID!;
+    
+    // Verificar se já existe um registro para o mesmo colaborador e período
+    const existingRecord = await db.get(`
+      SELECT id FROM pontos_eletronicos 
+      WHERE colaborador = ? AND periodo = ?
+    `, [dados.colaborador, dados.periodo]);
+    
+    if (existingRecord) {
+      console.log(`⚠️ Registro já existe para ${dados.colaborador} no período ${dados.periodo}. Atualizando...`);
+      
+      // Atualizar registro existente
+      await db.run(`
+        UPDATE pontos_eletronicos 
+        SET previsto = ?, realizado = ?, saldo = ?, saldo_minutos = ?, assinatura = ?, arquivo_origem = ?, data_processamento = CURRENT_TIMESTAMP
+        WHERE colaborador = ? AND periodo = ?
+      `, [dados.previsto, dados.realizado, dados.saldo, dados.saldo_minutos, dados.assinatura, dados.arquivo_origem, dados.colaborador, dados.periodo]);
+      
+      console.log('✅ Ponto eletrônico atualizado com sucesso');
+      return existingRecord.id;
+    } else {
+      // Inserir novo registro
+      const result = await db.run(`
+        INSERT INTO pontos_eletronicos (colaborador, periodo, previsto, realizado, saldo, saldo_minutos, assinatura, arquivo_origem)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [dados.colaborador, dados.periodo, dados.previsto, dados.realizado, dados.saldo, dados.saldo_minutos, dados.assinatura, dados.arquivo_origem]);
+      
+      console.log('✅ Ponto eletrônico salvo com sucesso');
+      return result.lastID!;
+    }
   } catch (error) {
     console.error('❌ Erro ao salvar ponto eletrônico:', error);
     throw error;

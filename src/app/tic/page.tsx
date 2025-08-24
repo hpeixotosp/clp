@@ -329,11 +329,26 @@ export default function TICPage() {
         bValue = b.saldoMinutes;
       }
       
+      // Tratamento para valores undefined ou null
+      if (aValue === undefined || aValue === null) aValue = "";
+      if (bValue === undefined || bValue === null) bValue = "";
+      
+      // Comparação de strings com locale para nomes de colaboradores
       if (typeof aValue === "string" && typeof bValue === "string") {
-        const comparison = aValue.localeCompare(bValue);
+        const comparison = aValue.localeCompare(bValue, 'pt-BR', { 
+          sensitivity: 'base',
+          numeric: true,
+          ignorePunctuation: true
+        });
         return sortDirection === "asc" ? comparison : -comparison;
       }
       
+      // Comparação numérica
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+      }
+      
+      // Fallback para outros tipos
       if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
       if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
       return 0;
