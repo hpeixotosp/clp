@@ -230,35 +230,101 @@ class PontoProcessor:
         
         return nome, "Não encontrado"
     
-    def check_digital_signature(self, text: str) -> bool:
-        """Verifica se o documento tem assinatura digital - MELHORADO"""
-        # Padrões específicos para assinatura digital
+    def check_digital_signature(self, text: str, pdf_path: str = None) -> bool:
+        """Verifica se o documento tem assinatura digital - COM OCR"""
+        # Padrões simples para detectar "assinado digitalmente" e similares
         patterns = [
             r'assinado\s+digitalmente',
             r'assinatura\s+digital',
-            r'documento\s+assinado\s+digitalmente',
-            r'ponto\s+assinado\s+digitalmente',
             r'assinado\s+eletronicamente',
             r'assinatura\s+eletrônica',
-            r'certificado\s+digital',
-            r'assinado',
-            r'assinatura',
-            r'cpf\s*[0-9]',
-            r'[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}',
-            r'colaborador\s*assinou',
-            r'ponto\s*assinado',
-            r'verificado',
-            r'validado'
+            r'certificado\s+digital'
         ]
         
         text_lower = text.lower()
+        
+        # Verificar se algum dos padrões está presente no texto extraído
         for pattern in patterns:
             if re.search(pattern, text_lower):
-                print(f"Assinatura detectada com padrão: {pattern}")
+                print(f"Assinatura digital detectada no texto: {pattern}")
                 return True
+        
+        # Se não encontrou no texto, tentar OCR nas imagens do PDF
+        if pdf_path:
+            ocr_text = self.extract_text_with_ocr(pdf_path)
+            if ocr_text:
+                ocr_text_lower = ocr_text.lower()
+                # Primeiro tentar os padrões completos
+                for pattern in patterns:
+                    if re.search(pattern, ocr_text_lower):
+                        print(f"Assinatura digital detectada via OCR: {pattern}")
+                        return True
+                
+                # Se não encontrou padrões completos, procurar por palavras-chave simples
+                simple_keywords = ['assinado', 'assinatura']
+                for keyword in simple_keywords:
+                    if keyword in ocr_text_lower:
+                        print(f"Assinatura detectada via OCR (palavra-chave): {keyword}")
+                        return True
         
         print("Nenhuma assinatura detectada")
         return False
+    
+    def extract_text_with_ocr(self, pdf_path: str) -> str:
+        """Extrai texto de imagens no PDF usando OCR"""
+        try:
+            import pytesseract
+            import fitz  # PyMuPDF
+            from PIL import Image
+            import io
+            
+            print(f"Executando OCR no arquivo: {pdf_path}")
+            
+            # Configurar caminho do Tesseract se necessário
+            try:
+                pytesseract.get_tesseract_version()
+            except:
+                # Tentar caminhos comuns do Tesseract no Windows
+                possible_paths = [
+                    r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+                    r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe"
+                ]
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        pytesseract.pytesseract.tesseract_cmd = path
+                        break
+            
+            # Abrir PDF com PyMuPDF
+            doc = fitz.open(pdf_path)
+            
+            ocr_text = ""
+            for page_num in range(len(doc)):
+                print(f"Processando página {page_num+1} com OCR...")
+                page = doc.load_page(page_num)
+                
+                # Converter página para imagem
+                pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))  # 2x zoom para melhor qualidade
+                img_data = pix.tobytes("png")
+                
+                # Converter para PIL Image
+                img = Image.open(io.BytesIO(img_data))
+                
+                # Extrair texto da imagem usando OCR
+                page_text = pytesseract.image_to_string(img, lang='eng')
+                ocr_text += page_text + "\n"
+            
+            doc.close()
+            print(f"OCR concluído. Texto extraído: {len(ocr_text)} caracteres")
+            return ocr_text
+            
+        except ImportError as e:
+            print(f"Erro: Dependências OCR não instaladas: {e}")
+            return ""
+        except Exception as e:
+            print(f"Erro durante OCR: {e}")
+            import traceback
+            traceback.print_exc()
+            return ""
     
     def parse_daily_entries(self, text: str) -> List[Dict]:
         """Extrai e analisa as entradas diárias do ponto - SOLUÇÃO UNIVERSAL"""
@@ -424,7 +490,7 @@ class PontoProcessor:
         
         # Analisar estrutura dos dados extraídos
         nome, periodo = self.analyze_hybrid_structure(text_data, table_data)
-        assinado = self.check_hybrid_signature(text_data, table_data)
+        assinado = self.check_hybrid_signature(text_data, table_data, pdf_path)
         
         # Extrair entradas diárias das tabelas (MANTIDO COMO ESTAVA)
         entries = self.parse_table_entries(table_data)
@@ -581,12 +647,12 @@ class PontoProcessor:
         return nome, periodo
     
     def check_table_signature(self, table_data: List[List[str]]) -> bool:
-        """Verifica assinatura baseada nos dados da tabela - MELHORADO"""
+        """Verifica assinatura baseada nos dados da tabela - MELHORADO E MAIS ESPECÍFICO"""
         for row in table_data:
-            row_text = " ".join(row).lower()
+            row_text = " ".join(str(cell) for cell in row if cell).lower()
             
-            # Padrões específicos para assinatura digital
-            signature_patterns = [
+            # Padrões específicos para assinatura digital (alta confiança)
+            specific_patterns = [
                 'assinado digitalmente',
                 'assinatura digital',
                 'documento assinado digitalmente',
@@ -594,22 +660,48 @@ class PontoProcessor:
                 'assinado eletronicamente',
                 'assinatura eletrônica',
                 'certificado digital',
-                'assinado',
-                'assinatura',
-                'cpf',
-                'verificado',
-                'validado',
-                'colaborador assinou',
-                'ponto assinado',
+                'validação digital',
+                'autenticação digital',
+                'colaborador assinou digitalmente'
+            ]
+            
+            # Padrões de CPF formatado (média confiança)
+            import re
+            cpf_patterns = [
+                r'cpf\s*:\s*[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}',
+                r'cpf\s*[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}',
+                r'[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}'
+            ]
+            
+            # Padrões genéricos (baixa confiança)
+            generic_patterns = [
                 'documento assinado',
+                'ponto assinado',
+                'colaborador assinou',
+                'verificado digitalmente',
+                'validado digitalmente',
                 'assinado por'
             ]
             
-            if any(pattern in row_text for pattern in signature_patterns):
-                print(f"Assinatura detectada: '{row_text}'")
-                return True
+            # Verificar padrões específicos primeiro
+            for pattern in specific_patterns:
+                if pattern in row_text:
+                    print(f"Assinatura digital detectada na tabela: '{pattern}' em '{row_text[:100]}...'")
+                    return True
+            
+            # Verificar padrões de CPF
+            for pattern in cpf_patterns:
+                if re.search(pattern, row_text):
+                    print(f"Assinatura detectada via CPF na tabela: '{pattern}' em '{row_text[:100]}...'")
+                    return True
+            
+            # Verificar padrões genéricos
+            for pattern in generic_patterns:
+                if pattern in row_text:
+                    print(f"Possível assinatura detectada na tabela: '{pattern}' em '{row_text[:100]}...'")
+                    return True
         
-        print("Nenhuma assinatura detectada")
+        print("Nenhuma assinatura detectada nas tabelas")
         return False
     
     def parse_table_entries(self, table_data: List[List[str]]) -> List[Dict]:
@@ -755,25 +847,13 @@ class PontoProcessor:
         
         return nome, periodo
     
-    def check_hybrid_signature(self, text_data: str, table_data: List[List[str]]) -> bool:
-        """Verifica assinatura combinando texto e tabelas - MELHORADO"""
-        # Verificar no texto primeiro
+    def check_hybrid_signature(self, text_data: str, table_data: List[List[str]], pdf_path: str = None) -> bool:
+        """Verifica assinatura apenas no texto - COM OCR"""
+        # Verificar apenas no texto extraído do PDF
         if text_data:
-            text_lower = text_data.lower()
-            signature_patterns = [
-                'assinado digitalmente', 'assinatura digital', 'documento assinado digitalmente',
-                'ponto assinado digitalmente', 'assinado eletronicamente', 'assinatura eletrônica',
-                'certificado digital', 'assinado', 'assinatura', 'cpf', 'verificado', 'validado',
-                'colaborador assinou', 'ponto assinado', 'documento assinado'
-            ]
-            
-            for pattern in signature_patterns:
-                if pattern in text_lower:
-                    print(f"Assinatura detectada no texto: '{pattern}'")
-                    return True
+            return self.check_digital_signature(text_data, pdf_path)
         
-        # Se não encontrou no texto, verificar nas tabelas
-        return self.check_table_signature(table_data)
+        return False
     
     def minutes_to_time_str(self, minutes: int) -> str:
         """Converte minutos para string HH:MM"""
