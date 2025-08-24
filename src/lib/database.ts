@@ -26,6 +26,7 @@ export async function getDatabase(): Promise<Database> {
   const isProduction = process.env.VERCEL === '1' || process.env.RAILWAY_ENVIRONMENT === 'production' || process.env.NODE_ENV === 'production';
   // No Railway, usar SQLite persistente ao invés de memória
   const isRailway = process.env.RAILWAY_ENVIRONMENT !== undefined;
+  const isVercel = process.env.VERCEL === '1';
   const dbPath = isProduction && !isRailway ? ':memory:' : path.join(process.cwd(), 'trt21.db');
   
   try {
