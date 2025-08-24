@@ -52,7 +52,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Andamento {
   id: number;
-  data: string; // Vem como string do DB
+  data: string;
   descricao: string;
 }
 
@@ -73,8 +73,8 @@ interface PROAD {
 
 export default function PROADPage() {
   const [proads, setProads] = useState<PROAD[]>([]);
-  const [isAdding, setIsAdding] = useState(false)
-  const [editingAndamentoId, setEditingAndamentoId] = useState<number | null>(null)
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingAndamentoId, setEditingAndamentoId] = useState<number | null>(null);
   const [editingAndamentoData, setEditingAndamentoData] = useState({ descricao: '', data: new Date() });
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -85,7 +85,6 @@ export default function PROADPage() {
   const [showCustomResponsavel, setShowCustomResponsavel] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Form state
   const [formData, setFormData] = useState<PROAD>({
     numero: "", 
     ano: "", 
@@ -99,10 +98,8 @@ export default function PROADPage() {
     responsavel_custom: ""
   });
 
-  // Lista de anos disponíveis
   const anosDisponiveis = ["23", "24", "25", "26"];
 
-  // Carregar PROADs do banco
   useEffect(() => {
     carregarPROADs();
   }, []);
@@ -112,7 +109,6 @@ export default function PROADPage() {
       const response = await fetch('/api/proads');
       if (response.ok) {
         const data = await response.json();
-        // Converter strings de data para objetos Date
         const proadsComData = data.map((proad: Record<string, unknown>) => ({
           ...proad,
           dataCadastro: new Date(proad.dataCadastro as string)
@@ -132,7 +128,6 @@ export default function PROADPage() {
   const handleInputChange = (field: keyof typeof formData, value: string | Date | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
-    // Mostrar campo customizado se "Outro(a)" for selecionado
     if (field === 'responsavel') {
       setShowCustomResponsavel(value === 'Outro(a)');
       if (value !== 'Outro(a)') {
@@ -167,37 +162,33 @@ export default function PROADPage() {
 
     try {
       if (isEditing && editingId) {
-        // Atualizar PROAD existente
         const response = await fetch(`/api/proads/${editingId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...formData,
-            // Garantir que a data seja passada corretamente para o histórico
             dataCadastro: formData.dataCadastro instanceof Date ? formData.dataCadastro.toISOString() : formData.dataCadastro
           })
         });
 
         if (response.ok) {
           await carregarPROADs();
-          setIsModalOpen(false); // Fechar o modal
+          setIsModalOpen(false);
           resetForm();
         }
       } else {
-        // Criar novo PROAD
         const response = await fetch('/api/proads', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...formData,
-            // Garantir que a data seja passada corretamente
             dataCadastro: formData.dataCadastro instanceof Date ? formData.dataCadastro.toISOString() : formData.dataCadastro
           })
         });
 
         if (response.ok) {
           await carregarPROADs();
-          setIsModalOpen(false); // Fechar o modal
+          setIsModalOpen(false);
           resetForm();
         }
       }
@@ -223,7 +214,7 @@ export default function PROADPage() {
     setShowCustomResponsavel(proad.responsavel === 'Outro(a)');
     setIsEditing(true);
     setEditingId(proad.id!);
-    setIsModalOpen(true); // Abrir o modal
+    setIsModalOpen(true);
   };
 
   const handleDelete = async (id: number) => {
@@ -267,7 +258,7 @@ export default function PROADPage() {
       if (response.ok) {
         setEditingAndamentoId(null);
         setEditingAndamentoData({ descricao: '', data: new Date() });
-        await carregarPROADs(); // Recarrega a lista para mostrar as mudanças
+        await carregarPROADs();
       }
     } catch (error) {
       console.error('Erro ao salvar andamento:', error);
@@ -282,7 +273,7 @@ export default function PROADPage() {
   const cancelEdit = () => {
     setIsEditing(false);
     setEditingId(null);
-    setIsModalOpen(false); // Fechar o modal
+    setIsModalOpen(false);
     resetForm();
   };
 
@@ -314,7 +305,6 @@ export default function PROADPage() {
     }
   };
 
-  // Filtrar PROADs
   const filteredProads = proads.filter(proad => {
     const matchesSearch = proad.numero.includes(searchTerm) || 
                          proad.ano.includes(searchTerm) ||
@@ -327,7 +317,6 @@ export default function PROADPage() {
     return matchesSearch && matchesSetor && matchesPrioridade && matchesSituacao;
   });
 
-  // Calcular métricas
   const totalProads = proads.length;
   const altaPrioridade = proads.filter(p => p.prioridade === "alta").length;
   const mediaPrioridade = proads.filter(p => p.prioridade === "media").length;
@@ -338,7 +327,6 @@ export default function PROADPage() {
     <DashboardLayout>
       <TooltipProvider>
         <div className="space-y-6">
-          {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold">PROADs</h1>
@@ -353,7 +341,6 @@ export default function PROADPage() {
             </Button>
           </div>
 
-          {/* Cards de Métricas */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -406,14 +393,12 @@ export default function PROADPage() {
             </Card>
           </div>
 
-          {/* Filtros */}
           <Card>
             <CardHeader>
               <CardTitle>Filtros</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col sm:flex-row gap-4">
-                {/* Busca */}
                 <div className="relative flex-1">
                   <FileTextIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -424,7 +409,6 @@ export default function PROADPage() {
                   />
                 </div>
                 
-                {/* Setor */}
                 <Select value={selectedSetor} onValueChange={setSelectedSetor}>
                   <SelectTrigger className="w-full sm:w-48">
                     <SelectValue placeholder="Setor" />
@@ -439,7 +423,6 @@ export default function PROADPage() {
                   </SelectContent>
                 </Select>
 
-                {/* Prioridade */}
                 <Select value={selectedPrioridade} onValueChange={setSelectedPrioridade}>
                   <SelectTrigger className="w-full sm:w-40">
                     <SelectValue placeholder="Prioridade" />
@@ -452,7 +435,6 @@ export default function PROADPage() {
                   </SelectContent>
                 </Select>
 
-                {/* Situação */}
                 <Select value={selectedSituacao} onValueChange={setSelectedSituacao}>
                   <SelectTrigger className="w-full sm:w-40">
                     <SelectValue placeholder="Situação" />
@@ -469,7 +451,6 @@ export default function PROADPage() {
             </CardContent>
           </Card>
 
-          {/* Modal de Adicionar/Editar PROAD */}
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogContent className="sm:max-w-4xl">
               <DialogHeader>
@@ -477,7 +458,6 @@ export default function PROADPage() {
               </DialogHeader>
               
               {isEditing ? (
-                // Modal de edição com duas abas
                 <Tabs defaultValue="andamento" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="andamento">Atualizar Andamento</TabsTrigger>
@@ -540,7 +520,160 @@ export default function PROADPage() {
                   <TabsContent value="geral" className="space-y-4 pt-4">
                     <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto pr-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Número PROAD */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Número PROAD *</label>
+                          <Input
+                            placeholder="0000"
+                            value={formData.numero}
+                            onChange={(e) => handleNumeroChange(e.target.value)}
+                            maxLength={4}
+                            className="w-24"
+                            required
+                          />
+                          <p className="text-xs text-muted-foreground">Máximo 4 dígitos</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Ano *</label>
+                          <Select value={formData.ano} onValueChange={(value) => handleInputChange('ano', value)}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o ano" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {anosDisponiveis.map((ano) => (
+                                <SelectItem key={ano} value={ano}>
+                                  {ano}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Assunto</label>
+                          <Input
+                            placeholder="Digite o assunto do PROAD"
+                            value={formData.assunto}
+                            onChange={(e) => handleInputChange('assunto', e.target.value)}
+                            className="w-full"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Setor de Origem *</label>
+                          <Select value={formData.setor} onValueChange={(value) => handleInputChange('setor', value)}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o setor" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-60">
+                              {setores.map((setor) => (
+                                <SelectItem key={setor} value={setor}>
+                                  {setor}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Prioridade</label>
+                          <Select value={formData.prioridade} onValueChange={(value: string) => handleInputChange('prioridade', value as PROAD['prioridade'])}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="alta">Alta</SelectItem>
+                              <SelectItem value="media">Média</SelectItem>
+                              <SelectItem value="baixa">Baixa</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Situação Atual</label>
+                          <Select value={formData.situacao} onValueChange={(value: string) => handleInputChange('situacao', value as PROAD['situacao'])}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="ativo">Ativo</SelectItem>
+                              <SelectItem value="concluido">Concluído</SelectItem>
+                              <SelectItem value="suspenso">Suspenso</SelectItem>
+                              <SelectItem value="cancelado">Cancelado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Responsável</label>
+                          <Select value={formData.responsavel} onValueChange={(value) => handleInputChange('responsavel', value)}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o responsável" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-60">
+                              {responsaveis.map((responsavel) => (
+                                <SelectItem key={responsavel} value={responsavel}>
+                                  {responsavel}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {showCustomResponsavel && (
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Nome do Responsável *</label>
+                            <Input
+                              placeholder="Digite o nome completo"
+                              value={formData.responsavel_custom}
+                              onChange={(e) => handleInputChange('responsavel_custom', e.target.value)}
+                              className="w-full"
+                              required
+                            />
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Data de Cadastro</label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !formData.dataCadastro && "text-muted-foreground"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {formData.dataCadastro ? format(formData.dataCadastro, "dd/MM/yyyy", { locale: ptBR }) : <span>Selecione uma data</span>}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <CalendarComponent
+                                mode="single"
+                                selected={formData.dataCadastro}
+                                onSelect={(date) => date && handleInputChange('dataCadastro', date)}
+                                disabled={{ after: new Date() }}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2 justify-end">
+                        <Button type="button" variant="outline" onClick={cancelEdit}>
+                          Cancelar
+                        </Button>
+                        <Button type="submit">
+                          {isEditing ? 'Atualizar PROAD' : 'Salvar PROAD'}
+                        </Button>
+                      </div>
+                    </form>
+                  </TabsContent>
+                </Tabs>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-4 pt-4 max-h-[80vh] overflow-y-auto pr-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Número PROAD *</label>
                       <Input
@@ -554,7 +687,6 @@ export default function PROADPage() {
                       <p className="text-xs text-muted-foreground">Máximo 4 dígitos</p>
                     </div>
 
-                    {/* Ano */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Ano *</label>
                       <Select value={formData.ano} onValueChange={(value) => handleInputChange('ano', value)}>
@@ -571,25 +703,13 @@ export default function PROADPage() {
                       </Select>
                     </div>
 
-                    {/* Assunto */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Assunto</label>
-                      <Input
-                        placeholder="Digite o assunto do PROAD"
-                        value={formData.assunto}
-                        onChange={(e) => handleInputChange('assunto', e.target.value)}
-                        className="w-full"
-                      />
-                    </div>
-
-                    {/* Setor */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Setor de Origem *</label>
+                      <label className="text-sm font-medium">Setor *</label>
                       <Select value={formData.setor} onValueChange={(value) => handleInputChange('setor', value)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione o setor" />
                         </SelectTrigger>
-                        <SelectContent className="max-h-60">
+                        <SelectContent>
                           {setores.map((setor) => (
                             <SelectItem key={setor} value={setor}>
                               {setor}
@@ -599,27 +719,25 @@ export default function PROADPage() {
                       </Select>
                     </div>
 
-                    {/* Prioridade */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Prioridade</label>
-                      <Select value={formData.prioridade} onValueChange={(value: string) => handleInputChange('prioridade', value as PROAD['prioridade'])}>
+                      <label className="text-sm font-medium">Prioridade *</label>
+                      <Select value={formData.prioridade} onValueChange={(value) => handleInputChange('prioridade', value)}>
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Selecione a prioridade" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="alta">Alta</SelectItem>
-                          <SelectItem value="media">Média</SelectItem>
                           <SelectItem value="baixa">Baixa</SelectItem>
+                          <SelectItem value="media">Média</SelectItem>
+                          <SelectItem value="alta">Alta</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
-                    {/* Situação */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Situação Atual</label>
-                      <Select value={formData.situacao} onValueChange={(value: string) => handleInputChange('situacao', value as PROAD['situacao'])}>
+                      <label className="text-sm font-medium">Situação *</label>
+                      <Select value={formData.situacao} onValueChange={(value) => handleInputChange('situacao', value)}>
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="Selecione a situação" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="ativo">Ativo</SelectItem>
@@ -630,14 +748,13 @@ export default function PROADPage() {
                       </Select>
                     </div>
 
-                    {/* Responsável */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Responsável</label>
+                      <label className="text-sm font-medium">Responsável *</label>
                       <Select value={formData.responsavel} onValueChange={(value) => handleInputChange('responsavel', value)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione o responsável" />
                         </SelectTrigger>
-                        <SelectContent className="max-h-60">
+                        <SelectContent>
                           {responsaveis.map((responsavel) => (
                             <SelectItem key={responsavel} value={responsavel}>
                               {responsavel}
@@ -647,23 +764,29 @@ export default function PROADPage() {
                       </Select>
                     </div>
 
-                    {/* Responsável Customizado */}
-                    {showCustomResponsavel && (
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Nome do Responsável *</label>
-                        <Input
-                          placeholder="Digite o nome completo"
-                          value={formData.responsavel_custom}
-                          onChange={(e) => handleInputChange('responsavel_custom', e.target.value)}
-                          className="w-full"
-                          required
-                        />
-                      </div>
-                    )}
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-sm font-medium">Assunto *</label>
+                      <Input
+                        placeholder="Descreva o assunto do PROAD..."
+                        value={formData.assunto}
+                        onChange={(e) => handleInputChange('assunto', e.target.value)}
+                        required
+                      />
+                    </div>
 
-                    {/* Data de Cadastro */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Data de Cadastro</label>
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-sm font-medium">Andamento *</label>
+                      <Textarea
+                        placeholder="Descreva o andamento do PROAD..."
+                        value={formData.andamento}
+                        onChange={(e) => handleInputChange('andamento', e.target.value)}
+                        rows={3}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-sm font-medium">Data de Cadastro *</label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
@@ -683,17 +806,13 @@ export default function PROADPage() {
                             selected={formData.dataCadastro}
                             onSelect={(date) => date && handleInputChange('dataCadastro', date)}
                             disabled={{ after: new Date() }}
-  
-                            
                           />
                         </PopoverContent>
                       </Popover>
                     </div>
                   </div>
 
-                  {/* Removido campo de andamento da aba "Editar Geral" */}
-                  
-                  <div className="flex gap-2 justify-end">
+                  <div className="flex gap-2 justify-end pt-4">
                     <Button type="button" variant="outline" onClick={cancelEdit}>
                       Cancelar
                     </Button>
@@ -702,174 +821,10 @@ export default function PROADPage() {
                     </Button>
                   </div>
                 </form>
-              </TabsContent>
-            </Tabs>
-          ) : (
-            // Modal de adição
-            <form onSubmit={handleSubmit} className="space-y-4 pt-4 max-h-[80vh] overflow-y-auto pr-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Número PROAD */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Número PROAD *</label>
-                  <Input
-                    placeholder="0000"
-                    value={formData.numero}
-                    onChange={(e) => handleNumeroChange(e.target.value)}
-                    maxLength={4}
-                    className="w-24"
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">Máximo 4 dígitos</p>
-                </div>
+              )}
+            </DialogContent>
+          </Dialog>
 
-                {/* Ano */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Ano *</label>
-                  <Select value={formData.ano} onValueChange={(value) => handleInputChange('ano', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o ano" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {anosDisponiveis.map((ano) => (
-                        <SelectItem key={ano} value={ano}>
-                          {ano}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Setor */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Setor *</label>
-                  <Select value={formData.setor} onValueChange={(value) => handleInputChange('setor', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o setor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {setores.map((setor) => (
-                        <SelectItem key={setor} value={setor}>
-                          {setor}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Prioridade */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Prioridade *</label>
-                  <Select value={formData.prioridade} onValueChange={(value) => handleInputChange('prioridade', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a prioridade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="baixa">Baixa</SelectItem>
-                      <SelectItem value="media">Média</SelectItem>
-                      <SelectItem value="alta">Alta</SelectItem>
-                      <SelectItem value="urgente">Urgente</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Situação */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Situação *</label>
-                  <Select value={formData.situacao} onValueChange={(value) => handleInputChange('situacao', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a situação" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ativo">Ativo</SelectItem>
-                      <SelectItem value="concluido">Concluído</SelectItem>
-                      <SelectItem value="suspenso">Suspenso</SelectItem>
-                      <SelectItem value="cancelado">Cancelado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Responsável */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Responsável *</label>
-                  <Select value={formData.responsavel} onValueChange={(value) => handleInputChange('responsavel', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o responsável" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {responsaveis.map((responsavel) => (
-                        <SelectItem key={responsavel} value={responsavel}>
-                          {responsavel}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Assunto */}
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-medium">Assunto *</label>
-                  <Input
-                    placeholder="Descreva o assunto do PROAD..."
-                    value={formData.assunto}
-                    onChange={(e) => handleInputChange('assunto', e.target.value)}
-                    required
-                  />
-                </div>
-
-                {/* Andamento */}
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-medium">Andamento *</label>
-                  <Textarea
-                    placeholder="Descreva o andamento do PROAD..."
-                    value={formData.andamento}
-                    onChange={(e) => handleInputChange('andamento', e.target.value)}
-                    rows={3}
-                    required
-                  />
-                </div>
-
-                {/* Data de Cadastro */}
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-medium">Data de Cadastro *</label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !formData.dataCadastro && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.dataCadastro ? format(formData.dataCadastro, "dd/MM/yyyy", { locale: ptBR }) : <span>Selecione uma data</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <CalendarComponent
-                        mode="single"
-                        selected={formData.dataCadastro}
-                        onSelect={(date) => date && handleInputChange('dataCadastro', date)}
-                        disabled={{ after: new Date() }}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-
-              <div className="flex gap-2 justify-end pt-4">
-                <Button type="button" variant="outline" onClick={cancelEdit}>
-                  Cancelar
-                </Button>
-                <Button type="submit">
-                  {isEditing ? 'Atualizar PROAD' : 'Salvar PROAD'}
-                </Button>
-              </div>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Lista de PROADs em formato de Cards */}
           <div className="space-y-4">
             {filteredProads.length > 0 ? (
               filteredProads.map((proad) => (
@@ -877,7 +832,6 @@ export default function PROADPage() {
                   <CardHeader>
                     <div className="flex items-start justify-between gap-6">
                       <div className="flex-1 space-y-4">
-                        {/* Cabeçalho com número e badges */}
                         <div className="flex items-center gap-4">
                           <CardTitle className="text-xl font-bold">PROAD {proad.numero}/{proad.ano}</CardTitle>
                           <div className="flex gap-2">
@@ -886,7 +840,6 @@ export default function PROADPage() {
                           </div>
                         </div>
                         
-                        {/* Informações principais em grid responsivo */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                           <div className="space-y-2">
                             <p className="font-semibold text-muted-foreground text-sm uppercase tracking-wide">Assunto</p>
@@ -906,19 +859,15 @@ export default function PROADPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {/* Andamento */}
                       <div className="bg-muted/30 p-4 rounded-lg">
                         <p className="text-muted-foreground font-semibold mb-2 text-sm uppercase tracking-wide">Descrição do Último Andamento</p>
                         <p className="text-foreground text-base leading-relaxed">{proad.andamento || "Nenhum andamento registrado."}</p>
                       </div>
                       
-                      {/* Informações secundárias */}
                       <div className="flex items-center justify-between text-sm text-muted-foreground border-t pt-4">
                         <span className="font-medium">Data de Cadastro: {format(new Date(proad.dataCadastro), "dd/MM/yyyy")}</span>
                         
-                        {/* Botões de ação na mesma linha */}
                         <div className="flex gap-2 items-center">
-                          {/* Botão de Histórico */}
                           {proad.historicoAndamentos && proad.historicoAndamentos.length > 0 && (
                             <Dialog>
                               <Tooltip>
@@ -938,20 +887,17 @@ export default function PROADPage() {
                                 </DialogHeader>
                                 <div className="max-h-[70vh] overflow-y-auto pr-6 py-4">
                                   <div className="relative pl-12">
-                                    {/* Linha vertical */}
                                     <div className="absolute left-12 top-0 bottom-0 w-0.5 bg-border"></div>
                                   
-                                  <ul className="space-y-8">
+                                    <ul className="space-y-8">
                                     {proad.historicoAndamentos.map((andamento, index) => (
                                       <li key={andamento.id} className="relative group">
-                                        {/* Ponto na timeline */}
                                         <div className="absolute -left-[42px] top-1 h-8 w-8 bg-primary rounded-full flex items-center justify-center ring-4 ring-background">
                                           <FileTextIcon className="h-3 w-3 text-primary-foreground flex-shrink-0" />
                                         </div>
                                         
                                         <div className="ml-12">
                                           {editingAndamentoId === andamento.id ? (
-                                            // Modo de edição
                                             <div className="space-y-3">
                                               <div className="flex items-center justify-between mb-2">
                                                 <div className="flex items-center gap-2">
@@ -994,7 +940,6 @@ export default function PROADPage() {
                                               />
                                             </div>
                                           ) : (
-                                            // Modo de visualização
                                             <>
                                               <div className="flex items-center justify-between mb-1">
                                                 <p className="font-semibold text-sm">{format(new Date(andamento.data), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
@@ -1025,28 +970,26 @@ export default function PROADPage() {
                               </div>
                             </DialogContent>
                           </Dialog>
+                        )}
 
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="outline" size="sm" onClick={() => handleEdit(proad)} className="h-8 w-8 p-0">
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Editar PROAD</p></TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="outline" size="sm" onClick={() => handleDelete(proad.id!)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Excluir PROAD</p></TooltipContent>
-                          </Tooltip>
-                        </div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={() => handleEdit(proad)} className="h-8 w-8 p-0">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Editar PROAD</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={() => handleDelete(proad.id!)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p>Excluir PROAD</p></TooltipContent>
+                        </Tooltip>
                       </div>
                     </div>
-                    
-                    {/* Remover a seção de botões de ação que estava duplicada */}
                   </CardContent>
                 </Card>
               ))
