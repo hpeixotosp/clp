@@ -205,7 +205,7 @@ export default function PROADPage() {
       setor: proad.setor,
       prioridade: proad.prioridade,
       situacao: proad.situacao,
-      dataCadastro: proad.dataCadastro,
+      dataCadastro: proad.dataCadastro instanceof Date ? proad.dataCadastro : new Date(proad.dataCadastro),
       andamento: proad.andamento || "",
       responsavel: proad.responsavel || "",
       assunto: proad.assunto || "",
@@ -709,7 +709,7 @@ export default function PROADPage() {
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione o setor" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="max-h-60">
                           {setores.map((setor) => (
                             <SelectItem key={setor} value={setor}>
                               {setor}
@@ -754,7 +754,7 @@ export default function PROADPage() {
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione o responsável" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="max-h-60">
                           {responsaveis.map((responsavel) => (
                             <SelectItem key={responsavel} value={responsavel}>
                               {responsavel}

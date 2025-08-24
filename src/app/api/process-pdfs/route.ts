@@ -15,8 +15,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Nenhum arquivo enviado' }, { status: 400 });
     }
 
-    // Usar /tmp que é um diretório padrão para arquivos temporários em ambientes de contêiner
-    const tempDir = '/tmp';
+    // Usar diretório temporário compatível com Windows e outros sistemas
+    const tempDir = process.platform === 'win32' ? 
+      join(process.cwd(), 'temp') : 
+      '/tmp';
     await mkdir(tempDir, { recursive: true });
 
     const tempFilePaths: string[] = [];
@@ -34,8 +36,9 @@ export async function POST(request: NextRequest) {
     const csvFilePath = join(tempDir, csvFileName);
     const wrapperPath = join(process.cwd(), 'backend_pdf_processor_wrapper.py');
     
-    // Construir comando com argumentos corretos: wrapper.py pdf1.pdf pdf2.pdf /tmp nome.csv
-    const command = `python3 "${wrapperPath}" ${tempFilePaths.map(p => `"${p}"`).join(' ')} "${tempDir}" "${csvFileName}"`;
+    // Construir comando com argumentos corretos: wrapper.py pdf1.pdf pdf2.pdf tempDir nome.csv
+    const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+    const command = `${pythonCmd} "${wrapperPath}" ${tempFilePaths.map(p => `"${p}"`).join(' ')} "${tempDir}" "${csvFileName}"`;
 
     console.log(`Executando comando: ${command}`);
 

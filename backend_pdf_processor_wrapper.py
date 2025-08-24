@@ -16,8 +16,11 @@ def main():
     if hasattr(sys.stderr, 'reconfigure'):
         sys.stderr.reconfigure(encoding='utf-8')
     
-    # Testar comandos Python disponíveis
-    python_cmds = ['python3', 'python', '/usr/bin/python3', '/usr/bin/python']
+    # Testar comandos Python disponíveis (Windows primeiro)
+    if os.name == 'nt':  # Windows
+        python_cmds = ['python', 'python3', 'py']
+    else:  # Unix/Linux
+        python_cmds = ['python3', 'python', '/usr/bin/python3', '/usr/bin/python']
     python_cmd = None
     
     for cmd in python_cmds:

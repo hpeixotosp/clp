@@ -42,7 +42,7 @@ class AnalisadorTREtp:
     def configurar_genai(self):
         try:
             genai.configure(api_key=self.api_key)
-            self.modelo = genai.GenerativeModel('gemini-1.5-pro')
+            self.modelo = genai.GenerativeModel('gemini-1.5-flash')
         except Exception as e:
             print(json.dumps({
                 "error": f"Erro ao configurar Google AI: {str(e)}",

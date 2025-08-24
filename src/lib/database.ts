@@ -39,10 +39,25 @@ export async function getDatabase(): Promise<Database> {
         previsto TEXT NOT NULL,
         realizado TEXT NOT NULL,
         saldo TEXT NOT NULL,
+        saldo_minutos INTEGER,
         assinatura TEXT NOT NULL,
+        arquivo_origem TEXT,
         data_processamento DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Adicionar colunas se não existirem (para bancos existentes)
+    try {
+      await db.exec('ALTER TABLE pontos_eletronicos ADD COLUMN saldo_minutos INTEGER');
+    } catch (e) {
+      // Coluna já existe
+    }
+    
+    try {
+      await db.exec('ALTER TABLE pontos_eletronicos ADD COLUMN arquivo_origem TEXT');
+    } catch (e) {
+      // Coluna já existe
+    }
 
     await db.exec(`
       CREATE TABLE IF NOT EXISTS proads (
@@ -623,9 +638,24 @@ export async function atualizarAndamento(id: number, dados: { descricao: string;
       SET descricao = ?, data = ?
       WHERE id = ?
     `, [dados.descricao, dados.data, id]);
-    console.log('✅ Andamento atualizado com sucesso, ID:', id);
+    console.log('✅ Andamento PROAD atualizado com sucesso, ID:', id);
   } catch (error) {
-    console.error('❌ Erro ao atualizar andamento:', error);
+    console.error('❌ Erro ao atualizar andamento PROAD:', error);
+    throw error;
+  }
+}
+
+export async function atualizarAndamentoDemanda(id: number, dados: { descricao: string; data: string }): Promise<void> {
+  try {
+    const db = await getDatabase();
+    await db.run(`
+      UPDATE demandaandamentos 
+      SET descricao = ?, data = ?
+      WHERE id = ?
+    `, [dados.descricao, dados.data, id]);
+    console.log('✅ Andamento Demanda atualizado com sucesso, ID:', id);
+  } catch (error) {
+    console.error('❌ Erro ao atualizar andamento Demanda:', error);
     throw error;
   }
 }
@@ -634,9 +664,20 @@ export async function deletarAndamento(id: number): Promise<void> {
   try {
     const db = await getDatabase();
     await db.run('DELETE FROM proad_andamentos WHERE id = ?', [id]);
-    console.log('✅ Andamento deletado com sucesso, ID:', id);
+    console.log('✅ Andamento PROAD deletado com sucesso, ID:', id);
   } catch (error) {
-    console.error('❌ Erro ao deletar andamento:', error);
+    console.error('❌ Erro ao deletar andamento PROAD:', error);
+    throw error;
+  }
+}
+
+export async function deletarAndamentoDemanda(id: number): Promise<void> {
+  try {
+    const db = await getDatabase();
+    await db.run('DELETE FROM demandaandamentos WHERE id = ?', [id]);
+    console.log('✅ Andamento Demanda deletado com sucesso, ID:', id);
+  } catch (error) {
+    console.error('❌ Erro ao deletar andamento Demanda:', error);
     throw error;
   }
 }

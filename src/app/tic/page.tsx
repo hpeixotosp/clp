@@ -43,6 +43,8 @@ export default function TICPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("all");
   const [saldoFilter, setSaldoFilter] = useState("all");
+  const [sortField, setSortField] = useState<keyof TimeSheetResult>("colaborador");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [processingStats, setProcessingStats] = useState({
     totalFiles: 0,
     processedFiles: 0,
@@ -140,8 +142,20 @@ export default function TICPage() {
         console.log('✅ Resultados recebidos do Python:', data);
         setAnalysisProgress(100); // Definir progresso como 100% quando concluído
         
+        // Parse do CSV string para array de objetos
+        const csvLines = (data.csvContent || '').split('\n').filter(line => line.trim());
+        const headers = csvLines[0]?.split(',') || [];
+        const csvData = csvLines.slice(1).map(line => {
+          const values = line.split(',');
+          const row: Record<string, string> = {};
+          headers.forEach((header, index) => {
+            row[header.trim()] = values[index]?.trim() || '';
+          });
+          return row;
+        });
+        
         // Converter resultados do CSV para o formato esperado
-        const processedResults = data.results
+        const processedResults = csvData
           .filter((row: Record<string, unknown>) => row.colaborador && row.periodo && row.previsto && row.realizado)
           .map((row: Record<string, unknown>) => ({
             colaborador: row.colaborador as string,
@@ -183,6 +197,9 @@ export default function TICPage() {
           processedFiles: selectedFiles.length
         }));
         
+        // Recarregar dados salvos do banco para garantir sincronização
+        await carregarDadosSalvos();
+        
         console.log(`✅ ${processedResults.length} resultado(s) processado(s) e salvos no banco`);
       } else {
         throw new Error(data.error || 'Erro desconhecido no processamento');
@@ -205,17 +222,27 @@ export default function TICPage() {
 
   const limparFila = async () => {
     try {
-      // Limpar apenas a UI, não o banco de dados
-      setResults([]);
-      setSearchTerm("");
-      setSelectedMonth("all");
-      setSaldoFilter("all");
-      console.log('✅ Interface limpa (dados mantidos no banco para consultas futuras)');
+      // Limpar dados do banco de dados
+      const response = await fetch('/api/pontos-eletronicos', {
+        method: 'DELETE'
+      });
       
-      // Mostrar feedback visual
-      alert('Fila limpa da interface! Os dados permanecem salvos no banco para consultas futuras.');
+      if (response.ok) {
+        // Limpar também a UI
+        setResults([]);
+        setSearchTerm("");
+        setSelectedMonth("all");
+        setSaldoFilter("all");
+        console.log('✅ Todos os dados foram removidos permanentemente');
+        
+        // Mostrar feedback visual
+        alert('Todos os dados foram removidos permanentemente!');
+      } else {
+        throw new Error('Erro ao limpar dados do servidor');
+      }
     } catch (error) {
-      console.error('❌ Erro ao limpar fila:', error);
+      console.error('❌ Erro ao limpar dados:', error);
+      alert('Erro ao limpar dados. Tente novamente.');
     }
   };
 
@@ -252,6 +279,20 @@ export default function TICPage() {
     }
   };
 
+  const handleSort = (field: keyof TimeSheetResult) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortIcon = (field: keyof TimeSheetResult) => {
+    if (sortField !== field) return <ChevronDown className="h-3 w-3 opacity-30" />;
+    return sortDirection === "asc" ? <ChevronDown className="h-3 w-3" /> : <ChevronDown className="h-3 w-3 rotate-180" />;
+  };
+
   const getSaldoBadgeVariant = (saldoMinutes: number) => {
     return saldoMinutes < 0 ? "destructive" : "default";
   };
@@ -260,23 +301,43 @@ export default function TICPage() {
     return assinado ? "default" : "secondary";
   };
 
-  // Filtrar resultados baseado na busca, mês e saldo
-  const filteredResults = results.filter(result => {
-    const matchesSearch = result.colaborador.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         result.periodo.includes(searchTerm);
-    const matchesMonth = selectedMonth === "all" || result.periodo.includes(selectedMonth);
-    
-    let matchesSaldo = true;
-    if (saldoFilter === "positive") {
-      matchesSaldo = result.saldoMinutes > 0;
-    } else if (saldoFilter === "negative") {
-      matchesSaldo = result.saldoMinutes < 0;
-    } else if (saldoFilter === "zero") {
-      matchesSaldo = result.saldoMinutes === 0;
-    }
-    
-    return matchesSearch && matchesMonth && matchesSaldo;
-  });
+  // Filtrar e ordenar resultados
+  const filteredResults = results
+    .filter(result => {
+      const matchesSearch = result.colaborador.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           result.periodo.includes(searchTerm);
+      const matchesMonth = selectedMonth === "all" || result.periodo.includes(selectedMonth);
+      
+      let matchesSaldo = true;
+      if (saldoFilter === "positive") {
+        matchesSaldo = result.saldoMinutes > 0;
+      } else if (saldoFilter === "negative") {
+        matchesSaldo = result.saldoMinutes < 0;
+      } else if (saldoFilter === "zero") {
+        matchesSaldo = result.saldoMinutes === 0;
+      }
+      
+      return matchesSearch && matchesMonth && matchesSaldo;
+    })
+    .sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+      
+      // Tratamento especial para campos numéricos
+      if (sortField === "saldoMinutes") {
+        aValue = a.saldoMinutes;
+        bValue = b.saldoMinutes;
+      }
+      
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        const comparison = aValue.localeCompare(bValue);
+        return sortDirection === "asc" ? comparison : -comparison;
+      }
+      
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
 
   // Calcular métricas
   const totalProcessed = results.length;
@@ -591,17 +652,42 @@ export default function TICPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="cursor-pointer hover:bg-muted/50">
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("colaborador")}>
                         <div className="flex items-center gap-1">
                           Colaborador
-                          <ChevronDown className="h-3 w-3" />
+                          {getSortIcon("colaborador")}
                         </div>
                       </TableHead>
-                      <TableHead>Período</TableHead>
-                      <TableHead>Previsto</TableHead>
-                      <TableHead>Realizado</TableHead>
-                      <TableHead className="text-right">BH (Saldo)</TableHead>
-                      <TableHead className="text-center">Assinatura</TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("periodo")}>
+                        <div className="flex items-center gap-1">
+                          Período
+                          {getSortIcon("periodo")}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("previsto")}>
+                        <div className="flex items-center gap-1">
+                          Previsto
+                          {getSortIcon("previsto")}
+                        </div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("realizado")}>
+                        <div className="flex items-center gap-1">
+                          Realizado
+                          {getSortIcon("realizado")}
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-right cursor-pointer hover:bg-muted/50" onClick={() => handleSort("saldoMinutes")}>
+                        <div className="flex items-center gap-1 justify-end">
+                          BH (Saldo)
+                          {getSortIcon("saldoMinutes")}
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-center cursor-pointer hover:bg-muted/50" onClick={() => handleSort("assinatura")}>
+                        <div className="flex items-center gap-1 justify-center">
+                          Assinatura
+                          {getSortIcon("assinatura")}
+                        </div>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

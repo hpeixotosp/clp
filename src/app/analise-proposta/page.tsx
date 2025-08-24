@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FileDown, ListTree, FileScan, CheckCircle2, AlertTriangle, X, FileUp, FileText, Trash2, Loader2 } from "lucide-react";
 import Papa from "papaparse";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 
 // Estrutura de um item do relatório de análise
 interface AnalysisItem {
@@ -335,26 +336,28 @@ export default function AnalisePropostaPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 items-start">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         {/* Coluna 1: Seleção de Item */}
-                        <div className="space-y-2">
-                            <Label htmlFor="item-select">Selecione o Item para Análise</Label>
-                            <Select onValueChange={handleItemSelectionChange} value={selectedItem} disabled={isLoading}>
-                                <SelectTrigger id="item-select">
-                                    <SelectValue placeholder="Selecione um item..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {identifiedItems.map((item, index) => (
-                                        <SelectItem key={index} value={item}>{item}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="item-select" className="text-sm font-medium">Selecione o Item para Análise</Label>
+                                <Select onValueChange={handleItemSelectionChange} value={selectedItem} disabled={isLoading}>
+                                    <SelectTrigger id="item-select" className="h-11">
+                                        <SelectValue placeholder="Selecione um item..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {identifiedItems.map((item, index) => (
+                                            <SelectItem key={index} value={item}>{item}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
 
                         {/* Coluna 2: Upload da Proposta e Botão de Ação */}
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="proposal-upload">Selecione a(s) Proposta(s) e Documentos</Label>
+                                <Label htmlFor="proposal-upload" className="text-sm font-medium">Selecione a(s) Proposta(s) e Documentos</Label>
                                 <FileUploadBox
                                     id="proposal-upload"
                                     files={proposalFiles}
@@ -363,14 +366,35 @@ export default function AnalisePropostaPage() {
                                     disabled={!selectedItem || isLoading}
                                 />
                             </div>
-                            {selectedItem && proposalFiles.length > 0 && (
-                                <Button onClick={handleAnalyzeItem} disabled={isLoading} className="w-full">
-                                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileScan className="mr-2 h-4 w-4" />}
-                                    {isLoading ? 'Analisando item...' : 'Analisar Item'}
-                                </Button>
-                            )}
                         </div>
                     </div>
+                    
+                    {/* Progress indicator e botão de ação centralizados */}
+                    {selectedItem && proposalFiles.length > 0 && (
+                        <div className="space-y-4 pt-4 border-t">
+                            {isLoading && (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Analisando conformidade...</span>
+                                        <span className="text-muted-foreground">Aguarde</span>
+                                    </div>
+                                    <Progress value={75} className="h-2" />
+                                    <p className="text-xs text-muted-foreground text-center">{loadingMessage}</p>
+                                </div>
+                            )}
+                            <div className="flex justify-center">
+                                <Button 
+                                    onClick={handleAnalyzeItem} 
+                                    disabled={isLoading} 
+                                    className="min-w-[200px] h-11"
+                                    size="lg"
+                                >
+                                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileScan className="mr-2 h-4 w-4" />}
+                                    {isLoading ? 'Analisando Item...' : 'Analisar Item'}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         )}

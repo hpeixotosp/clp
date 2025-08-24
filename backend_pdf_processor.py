@@ -10,17 +10,17 @@ import os
 # Verificar dependências críticas
 try:
     import pdfplumber
-    print("✓ pdfplumber importado com sucesso")
+    print("[OK] pdfplumber importado com sucesso")
 except ImportError as e:
-    print(f"❌ ERRO: pdfplumber não encontrado: {e}")
+    print(f"[ERRO] pdfplumber não encontrado: {e}")
     print("Instale com: pip install pdfplumber")
     sys.exit(1)
 
 try:
     import pandas as pd
-    print("✓ pandas importado com sucesso")
+    print("[OK] pandas importado com sucesso")
 except ImportError as e:
-    print(f"❌ ERRO: pandas não encontrado: {e}")
+    print(f"[ERRO] pandas não encontrado: {e}")
     print("Instale com: pip install pandas")
     sys.exit(1)
 
@@ -30,9 +30,9 @@ try:
     import argparse
     from datetime import datetime
     from typing import Dict, List, Tuple, Optional
-    print("✓ Bibliotecas padrão importadas com sucesso")
+    print("[OK] Bibliotecas padrão importadas com sucesso")
 except ImportError as e:
-    print(f"❌ ERRO: Biblioteca padrão não encontrada: {e}")
+    print(f"[ERRO] Biblioteca padrão não encontrada: {e}")
     sys.exit(1)
 
 # Configurar encoding
@@ -40,9 +40,9 @@ if hasattr(sys.stdout, 'reconfigure'):
     try:
         sys.stdout.reconfigure(encoding='utf-8')
         sys.stderr.reconfigure(encoding='utf-8')
-        print("✓ Encoding configurado para UTF-8")
+        print("[OK] Encoding configurado para UTF-8")
     except Exception as e:
-        print(f"⚠️ Aviso: Não foi possível configurar encoding: {e}")
+        print(f"[AVISO] Não foi possível configurar encoding: {e}")
 
 print("=== INICIANDO PROCESSAMENTO DE PDFs ===")
 print(f"Python version: {sys.version}")
@@ -315,21 +315,45 @@ class PontoProcessor:
             # Dia especial: usar C.PRE completo
             return entry['cpre_minutos'], 'Especial'
         else:
-            # Dia normal: calcular (Sai2-Ent2) + (Sai1-Ent1)
+            # Dia normal: calcular com regras para registros ausentes
             try:
                 ent1 = self.time_to_minutes(entry['campo1'])
                 sai1 = self.time_to_minutes(entry['campo2'])
                 ent2 = self.time_to_minutes(entry['campo3'])
                 sai2 = self.time_to_minutes(entry['campo4'])
                 
-                if all(t > 0 for t in [ent1, sai1, ent2, sai2]):
+                # Verificar quais registros estão presentes (> 0)
+                has_ent1 = ent1 > 0
+                has_sai1 = sai1 > 0
+                has_ent2 = ent2 > 0
+                has_sai2 = sai2 > 0
+                
+                # Caso ideal: todos os registros presentes
+                if has_ent1 and has_sai1 and has_ent2 and has_sai2:
                     manha = sai1 - ent1
                     tarde = sai2 - ent2
                     total = manha + tarde
                     return total, 'Normal'
+                
+                # Caso ausente ENT1 ou SAI1: calcular apenas SAI2 - ENT2
+                elif (not has_ent1 or not has_sai1) and has_ent2 and has_sai2:
+                    tarde = sai2 - ent2
+                    return tarde, 'Normal'
+                
+                # Caso ausente ENT2 ou SAI2: calcular apenas SAI1 - ENT1
+                elif has_ent1 and has_sai1 and (not has_ent2 or not has_sai2):
+                    manha = sai1 - ent1
+                    return manha, 'Normal'
+                
+                # Caso faltem dados de ambos os períodos: jornada zero
+                elif (not has_ent1 or not has_sai1) and (not has_ent2 or not has_sai2):
+                    return 0, 'Incompleto'
+                
+                # Outros casos inválidos
                 else:
                     return 0, 'Inválido'
-            except:
+                    
+            except Exception as e:
                 return 0, 'Erro'
     
     def process_pdf(self, pdf_path: str) -> Dict:
@@ -516,37 +540,52 @@ class PontoProcessor:
         return False
     
     def parse_table_entries(self, table_data: List[List[str]]) -> List[Dict]:
-        """Extrai entradas diárias diretamente das tabelas"""
+        """Extrai entradas diárias diretamente das tabelas - CORRIGIDO"""
         entries = []
         
         for row in table_data:
-            row_text = " ".join(row)
-            
-            # Procurar por padrão: DATA + 4 horários + C.PRE
-            # Padrão mais flexível: DATA + qualquer coisa + 4 horários + C.PRE
-            data_match = re.search(r'(\d{2}/\d{2}/\d{4})', row_text)
-            if data_match:
-                data = data_match.group(1)
-                
-                # Procurar por 4 horários na linha
-                horarios = re.findall(r'(\d{1,2}:\d{2})', row_text)
-                cpre_match = re.search(r'(0[68]:00:00)', row_text)
-                
-                if len(horarios) >= 4 and cpre_match:
-                    cpre = cpre_match.group(1)
+            # Verificar se a linha tem pelo menos 4 colunas e contém uma data
+            if len(row) >= 4:
+                # Procurar por data na primeira coluna
+                data_match = re.search(r'(\d{2}/\d{2}/\d{4})', str(row[0]))
+                if data_match:
+                    data = data_match.group(1)
+                    
+                    # Extrair horários das colunas 1 e 2 (Ent 1 - Sai 1, Ent 2 - Sai 2)
+                    ent1_sai1 = str(row[1]) if len(row) > 1 else ''
+                    ent2_sai2 = str(row[2]) if len(row) > 2 else ''
+                    cpre = str(row[3]) if len(row) > 3 else '08:00:00'
+                    
+                    # Extrair horários individuais
+                    horarios_1 = re.findall(r'(\d{1,2}:\d{2})', ent1_sai1)
+                    horarios_2 = re.findall(r'(\d{1,2}:\d{2})', ent2_sai2)
+                    
+                    # Organizar os 4 horários: ENT1, SAI1, ENT2, SAI2
+                    campo1 = horarios_1[0] if len(horarios_1) > 0 else ''
+                    campo2 = horarios_1[1] if len(horarios_1) > 1 else ''
+                    campo3 = horarios_2[0] if len(horarios_2) > 0 else ''
+                    campo4 = horarios_2[1] if len(horarios_2) > 1 else ''
+                    
+                    # Verificar se C.PRE é válido
+                    if not re.match(r'0[68]:00:00', cpre):
+                        cpre = '08:00:00'  # Padrão
+                    
+                    # Pular entradas com ATEST, FOLGA, etc.
+                    if any(skip in ent1_sai1.upper() for skip in ['ATEST', 'FOLGA', 'FALTA']):
+                        continue
                     
                     entry = {
                         'data': data,
                         'dia_semana': 'N/A',
-                        'campo1': horarios[0],
-                        'campo2': horarios[1],
-                        'campo3': horarios[2],
-                        'campo4': horarios[3],
+                        'campo1': campo1,  # ENT1
+                        'campo2': campo2,  # SAI1
+                        'campo3': campo3,  # ENT2
+                        'campo4': campo4,  # SAI2
                         'cpre': cpre,
                         'cpre_minutos': self.time_to_minutes(cpre)
                     }
                     entries.append(entry)
-                    print(f"Entrada da tabela: {data} - {horarios[0]} {horarios[1]} {horarios[2]} {horarios[3]} C.PRE:{cpre}")
+                    print(f"Entrada da tabela: {data} - ENT1:{campo1} SAI1:{campo2} ENT2:{campo3} SAI2:{campo4} C.PRE:{cpre}")
         
         print(f"Total de {len(entries)} entradas extraídas das tabelas")
         return entries
@@ -691,28 +730,28 @@ class PontoProcessor:
             
             print(f"Preparando {len(csv_data)} registros para CSV")
             
-                    # Salvar CSV
-        df = pd.DataFrame(csv_data)
-        
-        # Garantir que o diretório existe
-        output_dir = os.path.dirname(output_path)
-        if output_dir and not os.path.exists(output_dir):
-            os.makedirs(output_dir, exist_ok=True)
-            print(f"✓ Diretório criado: {output_dir}")
-        
-        # Salvar CSV
-        df.to_csv(output_path, index=False, encoding='utf-8-sig')
-        print(f"✓ CSV salvo com sucesso em: {output_path}")
-        print(f"✓ Tamanho do arquivo: {os.path.getsize(output_path)} bytes")
-        
-        # Verificar se o arquivo foi realmente criado
-        if os.path.exists(output_path):
-            print(f"✓ Arquivo confirmado no sistema: {output_path}")
-        else:
-            print(f"❌ ERRO: Arquivo não foi criado: {output_path}")
+            # Salvar CSV
+            df = pd.DataFrame(csv_data)
             
+            # Garantir que o diretório existe
+            output_dir = os.path.dirname(output_path)
+            if output_dir and not os.path.exists(output_dir):
+                os.makedirs(output_dir, exist_ok=True)
+                print(f"[OK] Diretório criado: {output_dir}")
+            
+            # Salvar CSV
+            df.to_csv(output_path, index=False, encoding='utf-8-sig')
+            print(f"[OK] CSV salvo com sucesso em: {output_path}")
+            print(f"[OK] Tamanho do arquivo: {os.path.getsize(output_path)} bytes")
+            
+            # Verificar se o arquivo foi realmente criado
+            if os.path.exists(output_path):
+                print(f"[OK] Arquivo confirmado no sistema: {output_path}")
+            else:
+                print(f"[ERRO] Arquivo não foi criado: {output_path}")
+                
         except Exception as e:
-            print(f"❌ ERRO ao salvar CSV: {e}")
+            print(f"[ERRO] ao salvar CSV: {e}")
             print(f"Diretório atual: {os.getcwd()}")
             print(f"Caminho tentado: {output_path}")
             raise
@@ -767,45 +806,45 @@ def main():
         print(f"Argumentos recebidos: {args}")
         
         processor = PontoProcessor()
-        print("✓ Processador inicializado")
+        print("[OK] Processador inicializado")
         
         if args.pdfs:
             # Processar PDFs especificados
             pdf_files = args.pdfs
-            print(f"✓ Processando PDFs especificados: {pdf_files}")
+            print(f"[OK] Processando PDFs especificados: {pdf_files}")
         else:
             # Modo automático: procurar PDFs no diretório atual
             pdf_files = [f for f in os.listdir('.') if f.endswith('.pdf') and 'ponto' in f.lower()]
             if not pdf_files:
-                print("⚠️ Nenhum PDF de ponto encontrado no diretório atual")
+                print("[AVISO] Nenhum PDF de ponto encontrado no diretório atual")
                 return
-            print(f"✓ PDFs encontrados automaticamente: {pdf_files}")
+            print(f"[OK] PDFs encontrados automaticamente: {pdf_files}")
         
         # Verificar se os arquivos existem
         for pdf_file in pdf_files:
             if not os.path.exists(pdf_file):
-                print(f"❌ ERRO: Arquivo não encontrado: {pdf_file}")
+                print(f"[ERRO] Arquivo não encontrado: {pdf_file}")
                 return
         
-        print(f"✓ Todos os {len(pdf_files)} PDFs existem")
+        print(f"[OK] Todos os {len(pdf_files)} PDFs existem")
         
         # Processar todos os PDFs
         print("=== INICIANDO PROCESSAMENTO ===")
         results = processor.process_multiple_pdfs(pdf_files)
-        print(f"✓ Processamento concluído: {len(results)} resultados")
+        print(f"[OK] Processamento concluído: {len(results)} resultados")
         
         # Salvar resultados em CSV
         print("=== SALVANDO CSV ===")
         processor.save_to_csv(results, args.output)
-        print("✓ CSV salvo com sucesso")
+        print("[OK] CSV salvo com sucesso")
         
         # Mostrar resumo
         print("\n=== RESUMO DOS RESULTADOS ===")
         for result in results:
             if 'error' not in result:
-                print(f"✓ {result['colaborador']} - {result['periodo']}: {result['saldo']} ({result['assinatura']})")
+                print(f"[OK] {result['colaborador']} - {result['periodo']}: {result['saldo']} ({result['assinatura']})")
             else:
-                print(f"❌ ERRO: {result['error']}")
+                print(f"[ERRO] {result['error']}")
         
         # Retornar resultados como JSON para a API
         if len(sys.argv) > 1:  # Se chamado via linha de comando
@@ -815,7 +854,7 @@ def main():
         print("=== PROCESSAMENTO CONCLUÍDO COM SUCESSO ===")
         
     except Exception as e:
-        print(f"❌ ERRO CRÍTICO na função main: {e}")
+        print(f"[ERRO] CRÍTICO na função main: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

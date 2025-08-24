@@ -204,11 +204,22 @@ export default function DemandasPage() {
     if (!editingAndamentoId) return;
     
     try {
-      // Aqui você implementaria a lógica para salvar o andamento editado
-      // Por enquanto, apenas fechar o modo de edição
-      setEditingAndamentoId(null);
-      setEditingAndamentoData({ descricao: '', data: new Date() });
-      await carregarDemandas(); // Recarregar para mostrar as mudanças
+      const response = await fetch(`/api/andamentos/${editingAndamentoId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          descricao: editingAndamentoData.descricao,
+          data: editingAndamentoData.data.toISOString()
+        })
+      });
+      
+      if (response.ok) {
+        setEditingAndamentoId(null);
+        setEditingAndamentoData({ descricao: '', data: new Date() });
+        await carregarDemandas(); // Recarregar para mostrar as mudanças
+      } else {
+        throw new Error('Falha ao salvar andamento');
+      }
     } catch (error) {
       console.error('Erro ao salvar andamento:', error);
       alert('Erro ao salvar andamento');
@@ -403,7 +414,7 @@ export default function DemandasPage() {
                               <Calendar
                                 mode="single"
                                 selected={formData.dataCadastro}
-                                onSelect={(date) => handleInputChange('dataCadastro', date || new Date())}
+                                onSelect={(date) => handleInputChange('dataCadastro', date)}
                               />
                             </PopoverContent>
                           </Popover>
@@ -561,7 +572,7 @@ export default function DemandasPage() {
                             <Calendar
                               mode="single"
                               selected={formData.dataCadastro}
-                              onSelect={(date) => handleInputChange('dataCadastro', date || new Date())}
+                              onSelect={(date) => handleInputChange('dataCadastro', date)}
                             />
                           </PopoverContent>
                         </Popover>
@@ -743,7 +754,7 @@ export default function DemandasPage() {
                         <Calendar
                           mode="single"
                           selected={formData.dataCadastro}
-                          onSelect={(date) => handleInputChange('dataCadastro', date || new Date())}
+                          onSelect={(date) => handleInputChange('dataCadastro', date)}
                         />
                       </PopoverContent>
                     </Popover>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { atualizarAndamento, deletarAndamento } from '@/lib/database';
+import { atualizarAndamento, atualizarAndamentoDemanda, deletarAndamento, deletarAndamentoDemanda, getDatabase } from '@/lib/database';
 
 interface Params {
   params: Promise<{ id: string; }>
@@ -16,7 +16,17 @@ export async function PUT(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     }
 
-    await atualizarAndamento(andamentoId, { descricao, data });
+    // Verificar se o andamento pertence a uma demanda ou PROAD
+    const db = await getDatabase();
+    const demandaAndamento = await db.get('SELECT id FROM demandaandamentos WHERE id = ?', [andamentoId]);
+    
+    if (demandaAndamento) {
+      // É um andamento de demanda
+      await atualizarAndamentoDemanda(andamentoId, { descricao, data });
+    } else {
+      // É um andamento de PROAD
+      await atualizarAndamento(andamentoId, { descricao, data });
+    }
     
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -37,7 +47,17 @@ export async function DELETE(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     }
 
-    await deletarAndamento(andamentoId);
+    // Verificar se o andamento pertence a uma demanda ou PROAD
+    const db = await getDatabase();
+    const demandaAndamento = await db.get('SELECT id FROM demandaandamentos WHERE id = ?', [andamentoId]);
+    
+    if (demandaAndamento) {
+      // É um andamento de demanda
+      await deletarAndamentoDemanda(andamentoId);
+    } else {
+      // É um andamento de PROAD
+      await deletarAndamento(andamentoId);
+    }
     
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -35,7 +35,7 @@ class AnalisadorTREtp:
     def __init__(self, api_key: str):
         """Inicializa o analisador com a chave da API do Google AI"""
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-pro')
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
         
     def extrair_texto_pdf(self, caminho_arquivo: str) -> str:
         """Extrai texto de um PDF usando PyMuPDF"""

@@ -1,0 +1,11 @@
+Este é um arquivo de teste simulando o pontoex.pdf mencionado pelo usuário.
+O arquivo real não foi encontrado no sistema.
+
+Para testar adequadamente as correções implementadas, seria necessário:
+1. O arquivo pontoex.pdf original
+2. Ou dados de exemplo com o formato correto
+
+As correções implementadas no código incluem:
+- Melhor extração de horários das tabelas
+- Lógica para lidar com campos de horário ausentes
+- Cálculo correto da jornada quando faltam ENT1/SAI1 ou ENT2/SAI2

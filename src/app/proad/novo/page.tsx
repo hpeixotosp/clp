@@ -94,7 +94,7 @@ export default function NewProadPage() {
                 <SelectTrigger id="setor-origem">
                     <SelectValue placeholder="Selecione o setor" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-60">
                     {setores.map((setor) => (
                         <SelectItem key={setor} value={setor}>{setor}</SelectItem>
                     ))}
