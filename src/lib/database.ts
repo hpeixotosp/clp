@@ -332,7 +332,7 @@ export async function salvarPROAD(dados: PROAD): Promise<number> {
       await db.run(`
         INSERT INTO proad_andamentos (proad_id, data, descricao)
         VALUES (?, ?, ?)
-      `, [result.lastID, new Date(), dados.andamento]);
+      `, [result.lastID, dados.dataCadastro || new Date(), dados.andamento]);
       console.log('✅ Primeiro andamento salvo no histórico para o PROAD ID:', result.lastID);
     }
 
@@ -422,7 +422,7 @@ export async function atualizarPROAD(id: number, dados: Partial<PROAD>): Promise
         await db.run(`
             INSERT INTO proad_andamentos (proad_id, data, descricao)
             VALUES (?, ?, ?)
-        `, [id, new Date(), dados.andamento]);
+        `, [id, dados.dataCadastro || new Date(), dados.andamento]);
         console.log('✅ Novo andamento salvo no histórico para o PROAD ID:', id);
     }
 

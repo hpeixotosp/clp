@@ -114,9 +114,9 @@ export function TRAnalisarClient() {
     
     // Mapear categorias para variantes de badge
     if (cleanCategory.includes('CONFORMIDADE')) {
-      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100 border-green-200">{cleanCategory}</Badge>;
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100 border-green-200">Conforme</Badge>;
     } else if (cleanCategory.includes('NAO CONFORMIDADE') || cleanCategory.includes('NÃO CONFORMIDADE')) {
-      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100 border-red-200">{cleanCategory}</Badge>;
+      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100 border-red-200">Não conforme</Badge>;
     } else if (cleanCategory.includes('SUGESTAO') || cleanCategory.includes('SUGESTÃO')) {
       return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200">{cleanCategory}</Badge>;
     } else {

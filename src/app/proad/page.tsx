@@ -237,7 +237,7 @@ export default function PROADPage() {
   const handleEditAndamento = (andamento: { id: number; descricao: string; data: string }) => {
     setEditingAndamentoId(andamento.id);
     setEditingAndamentoData({
-      descricao: andamento.descricao,
+      descricao: '',
       data: new Date(andamento.data)
     });
   };

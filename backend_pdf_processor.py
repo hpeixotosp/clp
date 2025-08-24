@@ -28,7 +28,7 @@ try:
     import re
     import json
     import argparse
-    from datetime import datetime
+    from datetime import datetime, date
     from typing import Dict, List, Tuple, Optional
     print("[OK] Bibliotecas padrão importadas com sucesso")
 except ImportError as e:
@@ -52,6 +52,18 @@ print(f"Script: {__file__}")
 class PontoProcessor:
     def __init__(self):
         self.results = []
+    
+    def is_business_day(self, date_str: str) -> bool:
+        """Verifica se uma data é dia útil (segunda a sexta-feira)"""
+        try:
+            # Converter string DD/MM/YYYY para objeto date
+            day, month, year = map(int, date_str.split('/'))
+            date_obj = date(year, month, day)
+            # 0=segunda, 1=terça, ..., 6=domingo
+            # Dias úteis são 0-4 (segunda a sexta)
+            return date_obj.weekday() < 5
+        except:
+            return False
     
     def extract_text_from_pdf(self, pdf_path: str) -> str:
         """Extrai texto completo de um PDF - SOLUÇÃO ROBUSTA"""
@@ -124,7 +136,9 @@ class PontoProcessor:
             match = re.search(pattern, text)
             if match:
                 nome_candidato = match.group(1).strip()
-                if len(nome_candidato) > 5 and not re.search(r'[0-9]', nome_candidato):
+                if (len(nome_candidato) > 5 and 
+                    not re.search(r'[0-9]', nome_candidato) and
+                    not any(code in nome_candidato.upper() for code in ['NMO', 'PQ', 'RQ', 'PS', 'RS'])):
                     nome = nome_candidato
                     print(f"Nome encontrado (Estratégia 1): '{nome}'")
                     break
@@ -385,10 +399,23 @@ class PontoProcessor:
         # Extrair entradas diárias das tabelas (MANTIDO COMO ESTAVA)
         entries = self.parse_table_entries(table_data)
         
-        # Calcular totais (MANTIDO COMO ESTAVA)
-        total_previsto = sum(entry['cpre_minutos'] for entry in entries)
+        # Calcular totais - CORRIGIDO: considerar apenas dias úteis para o previsto
+        total_previsto = 0
         total_realizado = 0
         dias_processados = []
+        dias_uteis_count = 0
+        
+        # Primeiro, contar dias úteis e calcular previsto apenas para eles
+        for entry in entries:
+            if self.is_business_day(entry['data']):
+                total_previsto += entry['cpre_minutos']
+                dias_uteis_count += 1
+                print(f"Dia útil: {entry['data']} - C.PRE: {entry['cpre']} ({entry['cpre_minutos']} min)")
+            else:
+                print(f"Fim de semana/feriado ignorado: {entry['data']} - C.PRE: {entry['cpre']}")
+        
+        print(f"\nResumo: {dias_uteis_count} dias úteis encontrados")
+        print(f"Total previsto (apenas dias úteis): {total_previsto} minutos = {self.minutes_to_time_str(total_previsto)}")
         
         for entry in entries:
             horas_dia, tipo = self.calculate_daily_hours(entry)
@@ -474,6 +501,17 @@ class PontoProcessor:
                 'DOM FOLGA FOLGA FOLGA FOLGA', 'SEG 07:30 12:00 13:00 16:30',
                 'DATA', 'ENT 1 - SAI 1', 'ENT 2 - SAI 2', 'C.PRE', 'H.NOT', 'H.FAL', 'H.EXT', 'E.NOT'
             ]):
+                continue
+            
+            # FILTRO ESPECÍFICO: Rejeitar códigos problemáticos como 'NMO PQ RQ PS RS'
+            if any(code in row_text.upper() for code in ['NMO', 'PQ', 'RQ', 'PS', 'RS']):
+                print(f"Rejeitando linha com códigos problemáticos: '{row_text}'")
+                continue
+            
+            # FILTRO ADICIONAL: Rejeitar sequências muito curtas ou que parecem códigos
+            words = row_text.split()
+            if len(words) <= 2 or all(len(word) <= 3 for word in words):
+                print(f"Rejeitando linha com palavras muito curtas: '{row_text}'")
                 continue
             
             # ESTRATÉGIA 1: Procurar por nomes que parecem reais (pessoas)
@@ -621,7 +659,9 @@ class PontoProcessor:
             nome_match = re.search(r'([A-Z][A-Z\sÇÁÉÍÓÚÀÂÊÔÃÕ\-]+?)(?=\s*-\s*Período)', text_data)
             if nome_match:
                 nome_candidato = nome_match.group(1).strip()
-                if len(nome_candidato) > 10:
+                # Filtrar códigos problemáticos
+                if (len(nome_candidato) > 10 and 
+                    not any(code in nome_candidato.upper() for code in ['NMO', 'PQ', 'RQ', 'PS', 'RS'])):
                     nome = nome_candidato
                     print(f"Nome encontrado por padrão 'Período': '{nome}'")
             
@@ -630,10 +670,10 @@ class PontoProcessor:
                 nome_match = re.search(r'([A-Z]{3,}\s+[A-Z]{3,}\s+[A-Z]{3,}\s+[A-Z]{3,}\s+[A-Z]{3,})', text_data)
                 if nome_match:
                     nome_candidato = nome_match.group(1).strip()
-                    # Verificar se não é cabeçalho ou estrutura
-                    if not any(exclude in nome_candidato.upper() for exclude in [
+                    # Verificar se não é cabeçalho, estrutura ou códigos problemáticos
+                    if (not any(exclude in nome_candidato.upper() for exclude in [
                         'HORARIO DE TRABALHO', 'TRT RN I', 'DOM FOLGA FOLGA', 'SEG 07:30 12:00'
-                    ]):
+                    ]) and not any(code in nome_candidato.upper() for code in ['NMO', 'PQ', 'RQ', 'PS', 'RS'])):
                         nome = nome_candidato
                         print(f"Nome encontrado por padrão de palavras: '{nome}'")
             
@@ -642,13 +682,13 @@ class PontoProcessor:
                 nome_match = re.search(r'([A-Z][A-Z\sÇÁÉÍÓÚÀÂÊÔÃÕ\-]{20,})', text_data)
                 if nome_match:
                     nome_candidato = nome_match.group(1).strip()
-                    # Filtrar nomes que parecem reais
+                    # Filtrar nomes que parecem reais e códigos problemáticos
                     if (len(nome_candidato) > 20 and 
                         not re.search(r'[0-9\/\-:]', nome_candidato) and
                         not any(exclude in nome_candidato.upper() for exclude in [
                             'CARTÃO', 'PONTO', 'EMPRESA', 'CNPJ', 'TECNOLOGIA', 'INFORMATICA',
                             'ENDEREÇO', 'RUA', 'NOVA', 'GRANADA', 'BELO', 'HORIZONTE', 'MINAS', 'GERAIS'
-                        ])):
+                        ]) and not any(code in nome_candidato.upper() for code in ['NMO', 'PQ', 'RQ', 'PS', 'RS'])):
                         nome = nome_candidato
                         print(f"Nome encontrado por padrão genérico: '{nome}'")
             
@@ -662,11 +702,12 @@ class PontoProcessor:
             lines = text_data.split('\n')
             for line in lines:
                 line = line.strip()
-                # Verificar se a linha tem características de nome completo
+                # Verificar se a linha tem características de nome completo e não contém códigos problemáticos
                 if (len(line) > 20 and 
                     re.search(r'[A-Z]{3,}\s+[A-Z]{3,}\s+[A-Z]{3,}', line) and
                     not re.search(r'[0-9\/\-]', line) and
-                    not any(exclude in line.upper() for exclude in ['CARTÃO', 'PONTO', 'HORARIO', 'TRABALHO', 'EMPRESA', 'CNPJ'])):
+                    not any(exclude in line.upper() for exclude in ['CARTÃO', 'PONTO', 'HORARIO', 'TRABALHO', 'EMPRESA', 'CNPJ']) and
+                    not any(code in line.upper() for code in ['NMO', 'PQ', 'RQ', 'PS', 'RS'])):
                     nome = line.strip()
                     print(f"Nome encontrado por análise de linha: '{nome}'")
                     break
