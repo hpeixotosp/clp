@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Storage</title>
+</head>
+<body>
+    <h1>Debug Local/Session Storage</h1>
+    <div id="output"></div>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            output.innerHTML += '<p>' + message + '</p>';
+            console.log(message);
+        }
+        
+        log('=== VERIFICANDO LOCALSTORAGE ===');
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            const value = localStorage.getItem(key);
+            log(`LocalStorage[${key}]: ${value.substring(0, 100)}${value.length > 100 ? '...' : ''}`);
+        }
+        
+        log('\n=== VERIFICANDO SESSIONSTORAGE ===');
+        for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            const value = sessionStorage.getItem(key);
+            log(`SessionStorage[${key}]: ${value.substring(0, 100)}${value.length > 100 ? '...' : ''}`);
+        }
+        
+        log('\n=== LIMPANDO TODOS OS DADOS ===');
+        localStorage.clear();
+        sessionStorage.clear();
+        log('✅ LocalStorage e SessionStorage limpos!');
+        
+        // Verificar se há cookies relacionados
+        log('\n=== VERIFICANDO COOKIES ===');
+        log('Cookies: ' + document.cookie);
+    </script>
+</body>
+</html>
