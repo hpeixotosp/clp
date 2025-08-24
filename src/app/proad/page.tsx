@@ -988,6 +988,7 @@ export default function PROADPage() {
                           </TooltipTrigger>
                           <TooltipContent><p>Excluir PROAD</p></TooltipContent>
                         </Tooltip>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
