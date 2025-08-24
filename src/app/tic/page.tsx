@@ -321,6 +321,16 @@ export default function TICPage() {
       return matchesSearch && matchesMonth && matchesSaldo;
     })
     .sort((a, b) => {
+      // Quando um mês específico é selecionado, priorizar ordenação alfabética por colaborador
+      if (selectedMonth !== "all" && sortField === "colaborador") {
+        const comparison = a.colaborador.localeCompare(b.colaborador, 'pt-BR', { 
+          sensitivity: 'base',
+          numeric: true,
+          ignorePunctuation: true
+        });
+        return sortDirection === "asc" ? comparison : -comparison;
+      }
+      
       let aValue = a[sortField];
       let bValue = b[sortField];
       

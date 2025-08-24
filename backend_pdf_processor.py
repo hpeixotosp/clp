@@ -197,9 +197,16 @@ class PontoProcessor:
         return nome, "Não encontrado"
     
     def check_digital_signature(self, text: str) -> bool:
-        """Verifica se o documento tem assinatura digital - SOLUÇÃO UNIVERSAL"""
-        # Padrões mais genéricos para qualquer tipo de assinatura
+        """Verifica se o documento tem assinatura digital - MELHORADO"""
+        # Padrões específicos para assinatura digital
         patterns = [
+            r'assinado\s+digitalmente',
+            r'assinatura\s+digital',
+            r'documento\s+assinado\s+digitalmente',
+            r'ponto\s+assinado\s+digitalmente',
+            r'assinado\s+eletronicamente',
+            r'assinatura\s+eletrônica',
+            r'certificado\s+digital',
             r'assinado',
             r'assinatura',
             r'cpf\s*[0-9]',
@@ -544,8 +551,15 @@ class PontoProcessor:
         for row in table_data:
             row_text = " ".join(row).lower()
             
-            # Padrões mais específicos para assinatura
+            # Padrões específicos para assinatura digital
             signature_patterns = [
+                'assinado digitalmente',
+                'assinatura digital',
+                'documento assinado digitalmente',
+                'ponto assinado digitalmente',
+                'assinado eletronicamente',
+                'assinatura eletrônica',
+                'certificado digital',
                 'assinado',
                 'assinatura',
                 'cpf',
@@ -554,8 +568,7 @@ class PontoProcessor:
                 'colaborador assinou',
                 'ponto assinado',
                 'documento assinado',
-                'assinado por',
-                'assinatura eletrônica'
+                'assinado por'
             ]
             
             if any(pattern in row_text for pattern in signature_patterns):
@@ -709,12 +722,14 @@ class PontoProcessor:
         return nome, periodo
     
     def check_hybrid_signature(self, text_data: str, table_data: List[List[str]]) -> bool:
-        """Verifica assinatura combinando texto e tabelas"""
+        """Verifica assinatura combinando texto e tabelas - MELHORADO"""
         # Verificar no texto primeiro
         if text_data:
             text_lower = text_data.lower()
             signature_patterns = [
-                'assinado', 'assinatura', 'cpf', 'verificado', 'validado',
+                'assinado digitalmente', 'assinatura digital', 'documento assinado digitalmente',
+                'ponto assinado digitalmente', 'assinado eletronicamente', 'assinatura eletrônica',
+                'certificado digital', 'assinado', 'assinatura', 'cpf', 'verificado', 'validado',
                 'colaborador assinou', 'ponto assinado', 'documento assinado'
             ]
             
