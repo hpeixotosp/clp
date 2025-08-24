@@ -143,7 +143,7 @@ export default function TICPage() {
         setAnalysisProgress(100); // Definir progresso como 100% quando concluído
         
         // Parse do CSV string para array de objetos
-        const csvLines = (data.csvContent || '').split('\n').filter(line => line.trim());
+        const csvLines = (data.csvContent || '').split('\n').filter((line: string) => line.trim());
         const headers = csvLines[0]?.split(',') || [];
         const csvData = csvLines.slice(1).map((line: string) => {
           const values = line.split(',');
