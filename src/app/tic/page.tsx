@@ -340,13 +340,17 @@ export default function TICPage() {
         bValue = b.saldoMinutes;
       }
       
-      // Tratamento para valores undefined ou null
+      // Tratamento para valores undefined ou null e conversão para string
       if (aValue === undefined || aValue === null) aValue = "";
       if (bValue === undefined || bValue === null) bValue = "";
       
+      // Converter para string para garantir compatibilidade com localeCompare
+      const aValueStr = String(aValue);
+      const bValueStr = String(bValue);
+      
       // Para ordenação por período, primeiro ordenar por período, depois por colaborador alfabeticamente
       if (sortField === "periodo") {
-        const periodoComparison = aValue.localeCompare(bValue, 'pt-BR', { 
+        const periodoComparison = aValueStr.localeCompare(bValueStr, 'pt-BR', { 
           sensitivity: 'base',
           numeric: true,
           ignorePunctuation: true
@@ -368,7 +372,7 @@ export default function TICPage() {
       
       // Comparação de strings com locale para nomes de colaboradores
       if (typeof aValue === "string" && typeof bValue === "string") {
-        const comparison = aValue.localeCompare(bValue, 'pt-BR', { 
+        const comparison = aValueStr.localeCompare(bValueStr, 'pt-BR', { 
           sensitivity: 'base',
           numeric: true,
           ignorePunctuation: true
