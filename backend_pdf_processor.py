@@ -53,18 +53,7 @@ class PontoProcessor:
     def __init__(self):
         self.results = []
     
-    def is_business_day(self, date_str: str) -> bool:
-        """Verifica se uma data é dia útil (segunda a sexta-feira)"""
-        try:
-            # Converter string DD/MM/YYYY para objeto date
-            day, month, year = map(int, date_str.split('/'))
-            date_obj = date(year, month, day)
-            # 0=segunda, 1=terça, ..., 6=domingo
-            # Dias úteis são 0-4 (segunda a sexta)
-            return date_obj.weekday() < 5
-        except:
-            return False
-    
+
     def extract_text_from_pdf(self, pdf_path: str) -> str:
         """Extrai texto completo de um PDF - SOLUÇÃO ROBUSTA"""
         try:
@@ -399,25 +388,13 @@ class PontoProcessor:
         # Extrair entradas diárias das tabelas (MANTIDO COMO ESTAVA)
         entries = self.parse_table_entries(table_data)
         
-        # Calcular totais - CORRIGIDO: considerar apenas dias úteis para o previsto
+        # Calcular totais
         total_previsto = 0
         total_realizado = 0
         dias_processados = []
-        dias_uteis_count = 0
-        
-        # Primeiro, contar dias úteis e calcular previsto apenas para eles
-        for entry in entries:
-            if self.is_business_day(entry['data']):
-                total_previsto += entry['cpre_minutos']
-                dias_uteis_count += 1
-                print(f"Dia útil: {entry['data']} - C.PRE: {entry['cpre']} ({entry['cpre_minutos']} min)")
-            else:
-                print(f"Fim de semana/feriado ignorado: {entry['data']} - C.PRE: {entry['cpre']}")
-        
-        print(f"\nResumo: {dias_uteis_count} dias úteis encontrados")
-        print(f"Total previsto (apenas dias úteis): {total_previsto} minutos = {self.minutes_to_time_str(total_previsto)}")
         
         for entry in entries:
+            total_previsto += entry['cpre_minutos']
             horas_dia, tipo = self.calculate_daily_hours(entry)
             total_realizado += horas_dia
             
