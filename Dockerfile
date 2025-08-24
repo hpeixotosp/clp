@@ -1,8 +1,8 @@
 # Use a imagem oficial do Node.js 20
 FROM node:20-alpine
 
-# Instale Python, pip, venv e outras dependências
-RUN apk add --no-cache python3 py3-pip python3-venv
+# Instale Python e pip
+RUN apk add --no-cache python3 py3-pip
 
 # Crie o diretório de trabalho
 WORKDIR /app
