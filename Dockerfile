@@ -1,37 +1,41 @@
-# Use a imagem oficial do Node.js 20
-FROM node:20-alpine
+# Etapa 1: Mudar para uma base Debian (slim) que é mais robusta que Alpine
+FROM node:20-slim
 
-# Instale TODAS as dependências de sistema necessárias para PyMuPDF e outras libs.
-# mupdf-tools, freetype-dev, harfbuzz-dev, etc., são essenciais para compilação.
-RUN apk add --no-cache build-base python3-dev py3-pip linux-headers \
-    mupdf-tools freetype-dev harfbuzz-dev jbig2dec-dev jpeg-dev openjpeg-dev
+# Instalar Python, PIP, VENV e as ferramentas de build essenciais via apt-get
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    python3-pip \
+    python3-venv \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# Crie o diretório de trabalho
+# Definir o diretório de trabalho
 WORKDIR /app
 
-# Crie e ative o ambiente virtual
+# Criar e ativar o ambiente virtual Python
 ENV VIRTUAL_ENV=/app/venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-# Copie os arquivos de dependência
+# Copiar arquivos de configuração de dependências
 COPY package*.json ./
 COPY requirements.txt ./
 
-# Instale as dependências do Node.js
+# Instalar dependências do Node.js
 RUN npm install
 
-# Instale as dependências do Python no ambiente virtual
+# Instalar dependências do Python DENTRO do ambiente virtual
+# Com a base Debian, o pip vai encontrar pacotes pré-compilados (wheels)
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-# Copie o restante do código da aplicação
+# Copiar o restante do código-fonte da aplicação
 COPY . .
 
-# Build da aplicação Next.js
+# Executar o build do Next.js
 RUN npm run build
 
-# Exponha a porta 3000
+# Expor a porta que a aplicação vai rodar
 EXPOSE 3000
 
-# Comando para iniciar a aplicação
+# Comando para iniciar o servidor
 CMD ["npm", "start"]
