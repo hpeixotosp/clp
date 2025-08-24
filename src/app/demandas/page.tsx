@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon, Plus, AlertTriangle, Clock, CheckCircle, AlertCircle, Edit, Trash2, FileText as FileTextIcon } from "lucide-react";
+import { Calendar as CalendarIcon, Plus, AlertTriangle, Clock, CheckCircle, AlertCircle, Edit, Trash2, FileText as FileTextIcon, Check, X } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -293,8 +293,9 @@ export default function DemandasPage() {
   const altaPrioridade = demandas.filter(d => d.prioridade === "alta").length;
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
+    <TooltipProvider>
+      <DashboardLayout>
+        <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -958,6 +959,7 @@ export default function DemandasPage() {
                             </div>
                           </DialogContent>
                         </Dialog>
+                        )}
 
                         <Button
                           variant="outline"
@@ -991,7 +993,8 @@ export default function DemandasPage() {
             </Card>
           )}
         </div>
-      </div>
-    </DashboardLayout>
+        </div>
+      </DashboardLayout>
+    </TooltipProvider>
   );
 }
