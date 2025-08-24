@@ -1,9 +1,10 @@
 # Use a imagem oficial do Node.js 20
 FROM node:20-alpine
 
-# Instale as dependências de build, Python, pip e os headers do Linux
-# psutil e outros pacotes precisam do linux-headers para compilar.
-RUN apk add --no-cache build-base python3-dev py3-pip linux-headers
+# Instale TODAS as dependências de sistema necessárias para PyMuPDF e outras libs.
+# mupdf-tools, freetype-dev, harfbuzz-dev, etc., são essenciais para compilação.
+RUN apk add --no-cache build-base python3-dev py3-pip linux-headers \
+    mupdf-tools freetype-dev harfbuzz-dev jbig2dec-dev jpeg-dev openjpeg-dev
 
 # Crie o diretório de trabalho
 WORKDIR /app
