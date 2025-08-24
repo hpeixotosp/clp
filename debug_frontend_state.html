@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Frontend State</title>
+</head>
+<body>
+    <h1>Debug Frontend State</h1>
+    <div id="output"></div>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            output.innerHTML += '<p>' + message + '</p>';
+        }
+        
+        log('=== VERIFICANDO CACHE DO NAVEGADOR ===');
+        
+        // Verificar localStorage
+        log('LocalStorage items: ' + localStorage.length);
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            const value = localStorage.getItem(key);
+            log('LocalStorage[' + key + ']: ' + (value ? value.substring(0, 100) + (value.length > 100 ? '...' : '') : 'null'));
+        }
+        
+        // Verificar sessionStorage
+        log('SessionStorage items: ' + sessionStorage.length);
+        for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            const value = sessionStorage.getItem(key);
+            log('SessionStorage[' + key + ']: ' + (value ? value.substring(0, 100) + (value.length > 100 ? '...' : '') : 'null'));
+        }
+        
+        // Verificar IndexedDB
+        if ('indexedDB' in window) {
+            log('IndexedDB disponível');
+            const request = indexedDB.open('test');
+            request.onsuccess = function(event) {
+                const db = event.target.result;
+                log('IndexedDB databases: ' + db.objectStoreNames.length);
+                db.close();
+            };
+        }
+        
+        // Verificar Service Workers
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                log('Service Workers: ' + registrations.length);
+                registrations.forEach(function(registration, index) {
+                    log('SW ' + index + ': ' + registration.scope);
+                });
+            });
+        }
+        
+        // Verificar Cache API
+        if ('caches' in window) {
+            caches.keys().then(function(cacheNames) {
+                log('Cache API: ' + cacheNames.length + ' caches');
+                cacheNames.forEach(function(cacheName) {
+                    log('Cache: ' + cacheName);
+                });
+            });
+        }
+        
+        // Testar API diretamente
+        log('=== TESTANDO API ===');
+        fetch('/api/pontos-eletronicos')
+            .then(response => response.json())
+            .then(data => {
+                log('API Response: ' + JSON.stringify(data, null, 2));
+                if (data.data) {
+                    data.data.forEach((ponto, index) => {
+                        log('Ponto ' + index + ': ' + ponto.colaborador);
+                        if (ponto.colaborador.includes('NEVE PWVAQAXARE')) {
+                            log('⚠️ ENCONTRADO REGISTRO CORROMPIDO NA API!');
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                log('Erro na API: ' + error.message);
+            });
+    </script>
+</body>
+</html>

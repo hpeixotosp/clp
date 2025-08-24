@@ -69,7 +69,7 @@ export default function TICPage() {
             previsto: ponto.previsto,
             realizado: ponto.realizado,
             saldo: ponto.saldo,
-            assinatura: ponto.assinatura === 1,
+            assinatura: ponto.assinatura === 'OK' || ponto.assinatura === true || ponto.assinatura === 1,
             saldoMinutes: ponto.saldo_minutos
           }));
           setResults(pontosConvertidos);
