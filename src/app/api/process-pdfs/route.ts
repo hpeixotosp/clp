@@ -1,178 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir, unlink, readdir } from 'fs/promises';
-import { existsSync, readFileSync } from 'fs';
+import { writeFile, mkdir, readdir, readFile } from 'fs/promises';
 import { join } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-
-// Função para listar arquivos em um diretório
-async function listFiles(dir: string): Promise<string[]> {
-  try {
-    const files = await readdir(dir);
-    return files;
-  } catch (error) {
-    return [`Erro ao listar diretório: ${error}`];
-  }
-}
 
 const execAsync = promisify(exec);
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('=== INICIANDO PROCESSAMENTO DE PDFs ===');
-    
-    // Usar 'python3' sempre
-    const pythonCommand = 'python3';
-
     const formData = await request.formData();
     const files = formData.getAll('files') as File[];
-    
-    console.log(`Arquivos recebidos: ${files.length}`);
-    
+
     if (!files || files.length === 0) {
-      return NextResponse.json(
-        { error: 'Nenhum arquivo enviado' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Nenhum arquivo enviado' }, { status: 400 });
     }
 
-    // Criar diretório temporário para os PDFs
-    const tempDir = isVercel ? '/tmp' : join(process.cwd(), 'temp_pdfs');
-    console.log(`Criando diretório temporário: ${tempDir}`);
-    if (!isVercel) {
-      await mkdir(tempDir, { recursive: true });
-    }
+    // Usar /tmp que é um diretório padrão para arquivos temporários em ambientes de contêiner
+    const tempDir = '/tmp';
+    await mkdir(tempDir, { recursive: true });
 
-    // Salvar PDFs temporariamente
-    const savedPaths: string[] = [];
+    const tempFilePaths: string[] = [];
     for (const file of files) {
-      if (file.type === 'application/pdf') {
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        const filePath = join(tempDir, file.name);
-        await writeFile(filePath, buffer);
-        savedPaths.push(filePath);
-        console.log(`PDF salvo: ${filePath}`);
-      }
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const tempFilePath = join(tempDir, `pdf_${Date.now()}_${file.name}`);
+      await writeFile(tempFilePath, buffer);
+      tempFilePaths.push(tempFilePath);
     }
 
-    if (savedPaths.length === 0) {
-      return NextResponse.json(
-        { error: 'Nenhum PDF válido encontrado' },
-        { status: 400 }
-      );
-    }
+    console.log(`Arquivos salvos em: ${tempFilePaths.join(', ')}`);
 
-    // Executar script Python usando wrapper
-    const pythonScript = isVercel 
-      ? join(process.cwd(), 'backend_pdf_processor_wrapper.py')
-      : join(process.cwd(), '..', 'backend_pdf_processor_wrapper.py');
+    const csvFileName = `resultados_ponto_${Date.now()}.csv`;
+    const csvFilePath = join(tempDir, csvFileName);
+    const wrapperPath = join(process.cwd(), 'backend_pdf_processor_wrapper.py');
     
-    console.log(`Script Python: ${pythonScript}`);
-    console.log(`PDFs para processar: ${savedPaths.join(', ')}`);
-    console.log(`Diretório de trabalho: ${process.cwd()}`);
+    const command = `python3 "${wrapperPath}" ${tempFilePaths.map(p => `"${p}"`).join(' ')} "${tempDir}" "${csvFilePath}"`;
 
-    // Verificar se o script Python existe
-    if (!existsSync(pythonScript)) {
-      console.error(`Script Python não encontrado: ${pythonScript}`);
-      return NextResponse.json(
-        { error: 'Script Python não encontrado' },
-        { status: 500 }
-      );
-    }
+    console.log(`Executando comando: ${command}`);
 
-    try {
-      
-      // Construir comando com aspas corretas para cada arquivo
-      const quotedPaths = savedPaths.map(path => `"${path}"`).join(' ');
-      const command = `${pythonCommand} "${pythonScript}" --pdfs ${quotedPaths}`;
-      
-      console.log('Comando executado:', command);
-      
-      const workingDir = isVercel ? process.cwd() : join(process.cwd(), '..');
-      console.log(`Executando com diretório de trabalho: ${workingDir}`);
-      console.log(`Arquivos no diretório de trabalho:`, await listFiles(workingDir));
-      
-      const { stdout, stderr } = await execAsync(
-        command,
-        { cwd: workingDir }
-      );
+    const { stdout, stderr } = await execAsync(command, {
+      timeout: 600000, // 10 minutos
+      cwd: process.cwd(),
+    });
 
-      if (stderr) {
-        console.error('Erro Python (stderr):', stderr);
-      }
+    console.log('STDOUT:', stdout);
+    if (stderr) console.error('STDERR:', stderr);
 
-      console.log('Saída Python (stdout):', stdout);
+    const csvContent = await readFile(csvFilePath, 'utf-8');
 
-      // Ler resultados do CSV gerado
-      const csvPath = isVercel 
-        ? join(process.cwd(), 'resultados_ponto.csv')
-        : join(process.cwd(), '..', 'resultados_ponto.csv');
-      
-      console.log(`Procurando CSV em: ${csvPath}`);
-      
-      // Aguardar um pouco para garantir que o arquivo seja criado
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (existsSync(csvPath)) {
-        console.log(`CSV encontrado: ${csvPath}`);
-        const csvContent = readFileSync(csvPath, 'utf-8');
-        
-        // Parse CSV para JSON
-        const lines = csvContent.split('\n');
-        const headers = lines[0].split(',');
-        const results = [];
-        
-        for (let i = 1; i < lines.length; i++) {
-          if (lines[i].trim()) {
-            const values = lines[i].split(',');
-            const row: Record<string, string> = {};
-            headers.forEach((header: string, index: number) => {
-              row[header.trim()] = values[index]?.trim() || '';
-            });
-            results.push(row);
-          }
-        }
+    return NextResponse.json({
+      success: true,
+      csvContent: csvContent,
+      message: 'Processamento de PDFs concluído com sucesso',
+    });
 
-        console.log(`Resultados parseados: ${results.length} linhas`);
-
-        // Limpar arquivos temporários
-        for (const path of savedPaths) {
-          try {
-            await unlink(path);
-            console.log(`Arquivo temporário removido: ${path}`);
-          } catch (e) {
-            console.error(`Erro ao deletar ${path}:`, e);
-          }
-        }
-
-        return NextResponse.json({
-          success: true,
-          results: results,
-          message: `${files.length} PDF(s) processado(s) com sucesso`
-        });
-
-      } else {
-        console.error(`CSV não encontrado: ${csvPath}`);
-        return NextResponse.json(
-          { error: 'Falha ao gerar CSV de resultados' },
-          { status: 500 }
-        );
-      }
-
-    } catch (execError) {
-      console.error('Erro na execução do Python:', execError);
-      return NextResponse.json(
-        { error: `Erro na execução do Python: ${execError}` },
-        { status: 500 }
-      );
-    }
-
-  } catch (error) {
-    console.error('Erro geral no processamento:', error);
-    return NextResponse.json(
-      { error: `Erro interno: ${error instanceof Error ? error.message : 'Unknown error'}` },
-      { status: 500 }
-    );
+  } catch (error: any) {
+    console.error('Erro no processamento de PDFs:', error);
+    return NextResponse.json({
+      error: 'Falha no processamento do lado do servidor.',
+      details: error.message,
+      stdout: error.stdout,
+      stderr: error.stderr,
+    }, { status: 500 });
   }
 }
