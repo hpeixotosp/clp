@@ -96,18 +96,48 @@ class PontoProcessor:
         # Remover caracteres CID
         text = re.sub(r'\(cid:\d+\)', ' ', text)
         
-        # Remover caracteres especiais comuns
+        # Remover caracteres especiais comuns e caracteres corrompidos
         text = re.sub(r'[^\x00-\x7F\u00A0-\uFFFF\s]', ' ', text)
+        
+        # Remover caracteres problemáticos específicos
+        text = re.sub(r'[\[\]<>@\^\\]', ' ', text)
+        
+        # Remover sequências de caracteres não imprimíveis
+        text = re.sub(r'[\x00-\x1F\x7F-\x9F]', ' ', text)
         
         # Normalizar espaços
         text = re.sub(r'\s+', ' ', text)
         
         return text.strip()
     
+    def validate_colaborador_name(self, nome: str) -> bool:
+        """Valida se o nome do colaborador é válido"""
+        if not nome or nome == "Não encontrado":
+            return False
+            
+        # Verificar se contém caracteres problemáticos
+        if re.search(r'[\[\]<>@\^\\]', nome):
+            return False
+            
+        # Verificar se tem pelo menos 2 palavras
+        palavras = nome.split()
+        if len(palavras) < 2:
+            return False
+            
+        # Verificar se todas as palavras têm pelo menos 2 caracteres
+        if any(len(palavra) < 2 for palavra in palavras):
+            return False
+            
+        # Verificar se não contém números
+        if re.search(r'\d', nome):
+            return False
+            
+        return True
+    
     def extract_header_info(self, text: str) -> Tuple[str, str]:
         """Extrai nome do colaborador e período do cabeçalho - SOLUÇÃO UNIVERSAL"""
-        # Normalizar espaços
-        text = re.sub(r'\s+', ' ', text)
+        # Aplicar limpeza de texto primeiro
+        text = self.clean_text(text)
         
         print(f"Texto extraído (primeiros 500 chars): {text[:500]}")
         
@@ -124,10 +154,8 @@ class PontoProcessor:
         for pattern in nome_patterns:
             match = re.search(pattern, text)
             if match:
-                nome_candidato = match.group(1).strip()
-                if (len(nome_candidato) > 5 and 
-                    not re.search(r'[0-9]', nome_candidato) and
-                    not any(code in nome_candidato.upper() for code in ['NMO', 'PQ', 'RQ', 'PS', 'RS'])):
+                nome_candidato = self.clean_text(match.group(1).strip())
+                if self.validate_colaborador_name(nome_candidato):
                     nome = nome_candidato
                     print(f"Nome encontrado (Estratégia 1): '{nome}'")
                     break
@@ -143,9 +171,11 @@ class PontoProcessor:
             for pattern in specific_patterns:
                 match = re.search(pattern, text)
                 if match:
-                    nome = match.group(1).strip()
-                    print(f"Nome encontrado (Estratégia 2): '{nome}'")
-                    break
+                    nome_candidato = self.clean_text(match.group(1).strip())
+                    if self.validate_colaborador_name(nome_candidato):
+                        nome = nome_candidato
+                        print(f"Nome encontrado (Estratégia 2): '{nome}'")
+                        break
         
         # Estratégia 3: Procurar por qualquer sequência que pareça nome
         if nome == "Não encontrado":
@@ -158,9 +188,11 @@ class PontoProcessor:
                     word not in ['PONTO', 'FOLHA', 'CONTROLE', 'PERIODO']):
                     nome_parts.append(word)
                     if len(nome_parts) >= 3:
-                        nome = " ".join(nome_parts)
-                        print(f"Nome encontrado (Estratégia 3): '{nome}'")
-                        break
+                        nome_candidato = self.clean_text(" ".join(nome_parts))
+                        if self.validate_colaborador_name(nome_candidato):
+                            nome = nome_candidato
+                            print(f"Nome encontrado (Estratégia 3): '{nome}'")
+                            break
         
         # Estratégia 4: Se ainda não encontrou, usar primeira linha não vazia
         if nome == "Não encontrado":
@@ -170,9 +202,11 @@ class PontoProcessor:
                 if (len(line) > 10 and 
                     re.search(r'[A-Z]', line) and 
                     not re.search(r'[0-9]{2}/[0-9]{2}', line)):
-                    nome = line[:50]  # Limitar tamanho
-                    print(f"Nome encontrado (Estratégia 4): '{nome}'")
-                    break
+                    nome_candidato = self.clean_text(line[:50])  # Limitar tamanho
+                    if self.validate_colaborador_name(nome_candidato):
+                        nome = nome_candidato
+                        print(f"Nome encontrado (Estratégia 4): '{nome}'")
+                        break
         
         # Encontrar datas
         data_pattern = r'(\d{2}/\d{2}/\d{4})'

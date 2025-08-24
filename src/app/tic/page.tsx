@@ -344,6 +344,28 @@ export default function TICPage() {
       if (aValue === undefined || aValue === null) aValue = "";
       if (bValue === undefined || bValue === null) bValue = "";
       
+      // Para ordenação por período, primeiro ordenar por período, depois por colaborador alfabeticamente
+      if (sortField === "periodo") {
+        const periodoComparison = aValue.localeCompare(bValue, 'pt-BR', { 
+          sensitivity: 'base',
+          numeric: true,
+          ignorePunctuation: true
+        });
+        
+        if (periodoComparison === 0) {
+          // Se os períodos são iguais, ordenar por colaborador alfabeticamente (sempre ascendente)
+          const colaboradorComparison = a.colaborador.localeCompare(b.colaborador, 'pt-BR', { 
+            sensitivity: 'base',
+            numeric: true,
+            ignorePunctuation: true
+          });
+          // Sempre ordenar colaboradores em ordem alfabética, independente da direção do período
+          return colaboradorComparison;
+        }
+        
+        return sortDirection === "asc" ? periodoComparison : -periodoComparison;
+      }
+      
       // Comparação de strings com locale para nomes de colaboradores
       if (typeof aValue === "string" && typeof bValue === "string") {
         const comparison = aValue.localeCompare(bValue, 'pt-BR', { 
