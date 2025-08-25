@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,7 +65,7 @@ export function RefisClient({ initialRefis, marcasDisponiveis: initialMarcas, in
     descricao: "",
   });
 
-  const fetchRefis = async () => {
+  const fetchRefis = useCallback(async () => {
     try {
       const response = await fetch('/api/refis');
       if (!response.ok) throw new Error('Falha ao carregar refis.');
@@ -248,7 +248,7 @@ export function RefisClient({ initialRefis, marcasDisponiveis: initialMarcas, in
 
   useEffect(() => {
     fetchRefis();
-  }, []);
+  }, [fetchRefis]);
 
   return (
     <DashboardLayout>

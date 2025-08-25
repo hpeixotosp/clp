@@ -1,0 +1,37 @@
+TRIBUNAL REGIONAL DO TRABALHO DA 21ª REGIÃO
+CONTRACHEQUE DE PAGAMENTO
+
+Nome: JOÃO SILVA DOS SANTOS
+CPF: 123.456.789-00
+Matrícula: 12345
+Cargo: Analista Judiciário
+
+Mês de Referência: Janeiro/2024
+
+VENCIMENTOS:
+Vencimento Básico: R$ 5.000,00
+Gratificação: R$ 1.000,00
+
+DESCONTOS:
+INSS: R$ 500,00
+IR: R$ 300,00
+
+Líquido: R$ 5.200,00
+
+DADOS BANCÁRIOS:
+Banco: 001 - Banco do Brasil
+Agência: 1234-5
+Conta: 12345-6
+
+---
+
+RECIBO DE DEPÓSITO
+
+Beneficiário: JOÃO SILVA DOS SANTOS
+CPF: 123.456.789-00
+Valor: R$ 5.200,00
+Data: 05/01/2024
+
+Banco: 001 - Banco do Brasil
+Agência: 1234-5
+Conta: 12345-6

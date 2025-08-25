@@ -118,7 +118,7 @@ export default function EmailsPage() {
       }
     ];
     setEmails(dadosMockados);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleInputChange = (field: keyof typeof composeData, value: string) => {
     setComposeData(prev => ({ ...prev, [field]: value }));

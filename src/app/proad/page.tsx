@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -100,11 +100,7 @@ export default function PROADPage() {
 
   const anosDisponiveis = ["23", "24", "25", "26"];
 
-  useEffect(() => {
-    carregarPROADs();
-  }, []);
-
-  const carregarPROADs = async () => {
+  const carregarPROADs = useCallback(async () => {
     try {
       const response = await fetch('/api/proads');
       if (response.ok) {
@@ -118,7 +114,11 @@ export default function PROADPage() {
     } catch (error) {
       console.error('Erro ao carregar PROADs:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    carregarPROADs();
+  }, [carregarPROADs]);
 
   const handleNumeroChange = (value: string) => {
     const numericValue = value.replace(/\D/g, '').slice(0, 4);

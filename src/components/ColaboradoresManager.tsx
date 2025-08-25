@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,11 +45,7 @@ function ColaboradoresManager({ onColaboradoresChange }: ColaboradoresManagerPro
   const [listaCompleta, setListaCompleta] = useState("");
   const [dialogAberto, setDialogAberto] = useState(false);
 
-  useEffect(() => {
-    carregarColaboradores();
-  }, []);
-
-  const carregarColaboradores = async () => {
+  const carregarColaboradores = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch('/api/colaboradores');
@@ -67,7 +63,11 @@ function ColaboradoresManager({ onColaboradoresChange }: ColaboradoresManagerPro
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [onColaboradoresChange]);
+
+  useEffect(() => {
+    carregarColaboradores();
+  }, [carregarColaboradores]);
 
   const adicionarColaborador = async () => {
     if (!novoColaborador.trim()) return;

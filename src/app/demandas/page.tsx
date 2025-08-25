@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,12 +44,7 @@ export default function DemandasPage() {
     andamento: ""
   });
 
-  // Carregar demandas do banco
-  useEffect(() => {
-    carregarDemandas();
-  }, []);
-
-  const carregarDemandas = async () => {
+  const carregarDemandas = useCallback(async () => {
     try {
       const response = await fetch('/api/demandas');
       if (response.ok) {
@@ -65,7 +60,12 @@ export default function DemandasPage() {
     } catch (error) {
       console.error('Erro ao carregar demandas:', error);
     }
-  };
+  }, []);
+
+  // Carregar demandas do banco
+  useEffect(() => {
+    carregarDemandas();
+  }, [carregarDemandas]);
 
   const handleInputChange = (field: keyof typeof formData, value: string | Date | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }));

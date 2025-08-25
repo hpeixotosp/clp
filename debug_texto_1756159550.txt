@@ -1,0 +1,25 @@
+
+
+CONTRACHEQUE
+Nome: JOÃO DA SILVA SANTOS
+CPF: 123.456.789-00
+Matrícula: 12345
+Cargo: ANALISTA JUDICIÁRIO
+Período: 12/2024
+
+VENCIMENTOS:
+Salário Base: 8.500,00
+Gratificação: 1.200,00
+Total Vencimentos: 9.700,00
+
+DESCONTOS:
+INSS: 850,00
+IRRF: 450,00
+Total Descontos: 1.300,00
+
+VALOR LÍQUIDO: 8.400,00
+
+DADOS BANCÁRIOS:
+Banco: 341
+Agência: 1234
+Conta corrente: 56789-0
