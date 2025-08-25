@@ -10,7 +10,7 @@ import os
 # Verificar dependências críticas
 try:
     import pdfplumber
-    print("[OK] pdfplumber importado com sucesso")
+    print("[OK] pdfplumber importado com sucesso", file=sys.stderr)
 except ImportError as e:
     print(f"[ERRO] pdfplumber não encontrado: {e}")
     print("Instale com: pip install pdfplumber")
@@ -18,7 +18,7 @@ except ImportError as e:
 
 try:
     import pandas as pd
-    print("[OK] pandas importado com sucesso")
+    print("[OK] pandas importado com sucesso", file=sys.stderr)
 except ImportError as e:
     print(f"[ERRO] pandas não encontrado: {e}")
     print("Instale com: pip install pandas")
@@ -30,7 +30,7 @@ try:
     import argparse
     from datetime import datetime, date
     from typing import Dict, List, Tuple, Optional
-    print("[OK] Bibliotecas padrão importadas com sucesso")
+    print("[OK] Bibliotecas padrão importadas com sucesso", file=sys.stderr)
 except ImportError as e:
     print(f"[ERRO] Biblioteca padrão não encontrada: {e}")
     sys.exit(1)
@@ -40,14 +40,14 @@ if hasattr(sys.stdout, 'reconfigure'):
     try:
         sys.stdout.reconfigure(encoding='utf-8')
         sys.stderr.reconfigure(encoding='utf-8')
-        print("[OK] Encoding configurado para UTF-8")
+        print("[OK] Encoding configurado para UTF-8", file=sys.stderr)
     except Exception as e:
         print(f"[AVISO] Não foi possível configurar encoding: {e}")
 
-print("=== INICIANDO PROCESSAMENTO DE PDFs ===")
-print(f"Python version: {sys.version}")
-print(f"Diretório atual: {os.getcwd()}")
-print(f"Script: {__file__}")
+print("=== INICIANDO PROCESSAMENTO DE PDFs ===", file=sys.stderr)
+print(f"Python version: {sys.version}", file=sys.stderr)
+print(f"Diretório atual: {os.getcwd()}", file=sys.stderr)
+print(f"Script: {__file__}", file=sys.stderr)
 
 class PontoProcessor:
     def __init__(self):
@@ -110,11 +110,45 @@ class PontoProcessor:
         
         return text.strip()
     
+    def load_valid_colaboradores(self) -> List[str]:
+        """Carrega a lista de colaboradores válidos do arquivo"""
+        try:
+            colaboradores_file = os.path.join(os.getcwd(), 'colaboradores_validos.txt')
+            if os.path.exists(colaboradores_file):
+                with open(colaboradores_file, 'r', encoding='utf-8') as f:
+                    colaboradores = [linha.strip() for linha in f.readlines() if linha.strip()]
+                print(f"Lista de colaboradores carregada: {len(colaboradores)} nomes")
+                return colaboradores
+            else:
+                print("Arquivo colaboradores_validos.txt não encontrado, usando validação padrão")
+                return []
+        except Exception as e:
+            print(f"Erro ao carregar lista de colaboradores: {e}")
+            return []
+    
     def validate_colaborador_name(self, nome: str) -> bool:
-        """Valida se o nome do colaborador é válido"""
+        """Valida se o nome do colaborador é válido usando lista de colaboradores válidos"""
         if not nome or nome == "Não encontrado":
             return False
+        
+        # Carregar lista de colaboradores válidos
+        colaboradores_validos = self.load_valid_colaboradores()
+        
+        # Se existe lista de colaboradores válidos, usar apenas ela
+        if colaboradores_validos:
+            # Verificar se o nome está na lista (case-insensitive)
+            nome_normalizado = nome.strip().upper()
+            for colaborador_valido in colaboradores_validos:
+                if colaborador_valido.strip().upper() == nome_normalizado:
+                    print(f"✅ Colaborador '{nome}' encontrado na lista válida", file=sys.stderr)
+                    return True
             
+            print(f"❌ Colaborador '{nome}' NÃO encontrado na lista válida", file=sys.stderr)
+            return False
+        
+        # Fallback: validação padrão se não há lista de colaboradores
+        print("Usando validação padrão (sem lista de colaboradores)", file=sys.stderr)
+        
         # Verificar se contém caracteres problemáticos
         if re.search(r'[\[\]<>@\^\\]', nome):
             return False
@@ -278,7 +312,7 @@ class PontoProcessor:
             from PIL import Image
             import io
             
-            print(f"Executando OCR no arquivo: {pdf_path}")
+            print(f"Executando OCR no arquivo: {pdf_path}", file=sys.stderr)
             
             # Configurar caminho do Tesseract se necessário
             try:
@@ -299,7 +333,7 @@ class PontoProcessor:
             
             ocr_text = ""
             for page_num in range(len(doc)):
-                print(f"Processando página {page_num+1} com OCR...")
+                print(f"Processando página {page_num+1} com OCR...", file=sys.stderr)
                 page = doc.load_page(page_num)
                 
                 # Converter página para imagem
@@ -314,14 +348,14 @@ class PontoProcessor:
                 ocr_text += page_text + "\n"
             
             doc.close()
-            print(f"OCR concluído. Texto extraído: {len(ocr_text)} caracteres")
+            print(f"OCR concluído. Texto extraído: {len(ocr_text)} caracteres", file=sys.stderr)
             return ocr_text
             
         except ImportError as e:
-            print(f"Erro: Dependências OCR não instaladas: {e}")
+            print(f"Erro: Dependências OCR não instaladas: {e}", file=sys.stderr)
             return ""
         except Exception as e:
-            print(f"Erro durante OCR: {e}")
+            print(f"Erro durante OCR: {e}", file=sys.stderr)
             import traceback
             traceback.print_exc()
             return ""
@@ -331,7 +365,7 @@ class PontoProcessor:
         # Normalizar espaços
         text = re.sub(r'\s+', ' ', text)
         
-        print(f"Procurando entradas diárias no texto...")
+        print(f"Procurando entradas diárias no texto...", file=sys.stderr)
         
         # SOLUÇÃO UNIVERSAL: Procurar por linhas que contenham DATA + 4 campos de tempo + C.PRE
         # Padrão: DATA + qualquer coisa + 4 horários + C.PRE (06:00:00 ou 08:00:00)
@@ -571,9 +605,9 @@ class PontoProcessor:
         nome = "Não encontrado"
         periodo = "Não encontrado"
         
-        print("=== ANALISANDO ESTRUTURA DA TABELA ===")
+        print("=== ANALISANDO ESTRUTURA DA TABELA ===", file=sys.stderr)
         for i, row in enumerate(table_data[:10]):  # Mostrar primeiras 10 linhas
-            print(f"Linha {i}: {row}")
+            print(f"Linha {i}: {row}", file=sys.stderr)
         
         # ESTRATÉGIA CORRIGIDA: Procurar por nome REAL do colaborador
         for i, row in enumerate(table_data):
@@ -589,7 +623,7 @@ class PontoProcessor:
             
             # FILTRO ESPECÍFICO: Rejeitar códigos problemáticos como 'NMO PQ RQ PS RS'
             if any(code in row_text.upper() for code in ['NMO', 'PQ', 'RQ', 'PS', 'RS']):
-                print(f"Rejeitando linha com códigos problemáticos: '{row_text}'")
+                print(f"Rejeitando linha com códigos problemáticos: '{row_text}'", file=sys.stderr)
                 continue
             
             # FILTRO ADICIONAL: Rejeitar sequências muito curtas ou que parecem códigos
@@ -761,14 +795,14 @@ class PontoProcessor:
         nome = "Não encontrado"
         periodo = "Não encontrado"
         
-        print("=== ANÁLISE HÍBRIDA: TEXTO + TABELAS ===")
+        print("=== ANÁLISE HÍBRIDA: TEXTO + TABELAS ===", file=sys.stderr)
         
         # ESTRATÉGIA 1: Procurar nome no texto extraído
         if text_data:
             print(f"Texto extraído (primeiros 300 chars): {text_data[:300]}")
             
             # ESTRATÉGIA UNIVERSAL: Procurar por QUALQUER nome de colaborador no texto
-            print("=== PROCURANDO NOME DO COLABORADOR ===")
+            print("=== PROCURANDO NOME DO COLABORADOR ===", file=sys.stderr)
             
             # ESTRATÉGIA DIRETA: Procurar por padrões específicos no texto completo
             # Padrão 1: Nome antes de "Período"
@@ -896,16 +930,16 @@ class PontoProcessor:
             output_dir = os.path.dirname(output_path)
             if output_dir and not os.path.exists(output_dir):
                 os.makedirs(output_dir, exist_ok=True)
-                print(f"[OK] Diretório criado: {output_dir}")
+                print(f"[OK] Diretório criado: {output_dir}", file=sys.stderr)
             
             # Salvar CSV
             df.to_csv(output_path, index=False, encoding='utf-8-sig')
-            print(f"[OK] CSV salvo com sucesso em: {output_path}")
-            print(f"[OK] Tamanho do arquivo: {os.path.getsize(output_path)} bytes")
+            print(f"[OK] CSV salvo com sucesso em: {output_path}", file=sys.stderr)
+            print(f"[OK] Tamanho do arquivo: {os.path.getsize(output_path)} bytes", file=sys.stderr)
             
             # Verificar se o arquivo foi realmente criado
             if os.path.exists(output_path):
-                print(f"[OK] Arquivo confirmado no sistema: {output_path}")
+                print(f"[OK] Arquivo confirmado no sistema: {output_path}", file=sys.stderr)
             else:
                 print(f"[ERRO] Arquivo não foi criado: {output_path}")
                 
@@ -955,7 +989,7 @@ class PontoProcessor:
 def main():
     """Função principal com suporte a argumentos de linha de comando"""
     try:
-        print("=== INICIANDO FUNÇÃO MAIN ===")
+        print("=== INICIANDO FUNÇÃO MAIN ===", file=sys.stderr)
         
         parser = argparse.ArgumentParser(description='Processa PDFs de ponto e gera CSV')
         parser.add_argument('--pdfs', nargs='+', help='Caminhos para os PDFs a serem processados')
@@ -965,19 +999,19 @@ def main():
         print(f"Argumentos recebidos: {args}")
         
         processor = PontoProcessor()
-        print("[OK] Processador inicializado")
+        print("[OK] Processador inicializado", file=sys.stderr)
         
         if args.pdfs:
             # Processar PDFs especificados
             pdf_files = args.pdfs
-            print(f"[OK] Processando PDFs especificados: {pdf_files}")
+            print(f"[OK] Processando PDFs especificados: {pdf_files}", file=sys.stderr)
         else:
             # Modo automático: procurar PDFs no diretório atual
             pdf_files = [f for f in os.listdir('.') if f.endswith('.pdf') and 'ponto' in f.lower()]
             if not pdf_files:
                 print("[AVISO] Nenhum PDF de ponto encontrado no diretório atual")
                 return
-            print(f"[OK] PDFs encontrados automaticamente: {pdf_files}")
+            print(f"[OK] PDFs encontrados automaticamente: {pdf_files}", file=sys.stderr)
         
         # Verificar se os arquivos existem
         for pdf_file in pdf_files:
@@ -985,32 +1019,32 @@ def main():
                 print(f"[ERRO] Arquivo não encontrado: {pdf_file}")
                 return
         
-        print(f"[OK] Todos os {len(pdf_files)} PDFs existem")
+        print(f"[OK] Todos os {len(pdf_files)} PDFs existem", file=sys.stderr)
         
         # Processar todos os PDFs
-        print("=== INICIANDO PROCESSAMENTO ===")
+        print("=== INICIANDO PROCESSAMENTO ===", file=sys.stderr)
         results = processor.process_multiple_pdfs(pdf_files)
-        print(f"[OK] Processamento concluído: {len(results)} resultados")
+        print(f"[OK] Processamento concluído: {len(results)} resultados", file=sys.stderr)
         
         # Salvar resultados em CSV
-        print("=== SALVANDO CSV ===")
+        print("=== SALVANDO CSV ===", file=sys.stderr)
         processor.save_to_csv(results, args.output)
-        print("[OK] CSV salvo com sucesso")
+        print("[OK] CSV salvo com sucesso", file=sys.stderr)
         
         # Mostrar resumo
-        print("\n=== RESUMO DOS RESULTADOS ===")
+        print("\n=== RESUMO DOS RESULTADOS ===", file=sys.stderr)
         for result in results:
             if 'error' not in result:
-                print(f"[OK] {result['colaborador']} - {result['periodo']}: {result['saldo']} ({result['assinatura']})")
+                print(f"[OK] {result['colaborador']} - {result['periodo']}: {result['saldo']} ({result['assinatura']})", file=sys.stderr)
             else:
                 print(f"[ERRO] {result['error']}")
         
         # Retornar resultados como JSON para a API
         if len(sys.argv) > 1:  # Se chamado via linha de comando
-            print("\n=== RESULTADOS JSON ===")
+            print("\n=== RESULTADOS JSON ===", file=sys.stderr)
             print(json.dumps(results, indent=2, ensure_ascii=False))
         
-        print("=== PROCESSAMENTO CONCLUÍDO COM SUCESSO ===")
+        print("=== PROCESSAMENTO CONCLUÍDO COM SUCESSO ===", file=sys.stderr)
         
     except Exception as e:
         print(f"[ERRO] CRÍTICO na função main: {e}")

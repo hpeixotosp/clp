@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { ColaboradoresManager } from "@/components/ColaboradoresManager";
 
 export default function TICPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -401,11 +402,12 @@ export default function TICPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Tabs para Frequência e Contracheque */}
+        {/* Tabs para Frequência, Contracheque e Colaboradores */}
         <Tabs defaultValue="frequencia" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="frequencia">Frequência</TabsTrigger>
             <TabsTrigger value="contracheque">Contracheque</TabsTrigger>
+            <TabsTrigger value="colaboradores">Colaboradores</TabsTrigger>
           </TabsList>
 
           <TabsContent value="frequencia" className="space-y-4">
@@ -801,6 +803,10 @@ export default function TICPage() {
             <TabsContent value="contracheque" className="space-y-4">
               <ContrachequeTab />
             </TabsContent>
+
+            <TabsContent value="colaboradores" className="space-y-4">
+              <ColaboradoresManager />
+            </TabsContent>
           </Tabs>
         </div>
       </DashboardLayout>
@@ -813,9 +819,14 @@ function ContrachequeTab() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<Array<{
     colaborador: string;
-    mesReferencia: string;
+    periodo: string;
+    tipoDocumento: string;
+    vencimentos: string;
+    descontos: string;
+    valorLiquido: string;
     status: string;
-    detalhes: string;
+    statusValidacao: string;
+    erro?: string;
   }>>([]);
   const [currentStep, setCurrentStep] = useState<'upload' | 'processing' | 'results'>('upload');
 
@@ -843,29 +854,56 @@ function ContrachequeTab() {
   };
 
   const processFiles = async () => {
-    if (files.length < 2) return;
-
+    if (files.length === 0) return;
+    
     setIsProcessing(true);
     setCurrentStep('processing');
-
+    
     try {
       const formData = new FormData();
-      files.forEach(file => formData.append('files', file));
+      files.forEach(file => {
+        formData.append('files', file);
+      });
 
-      const response = await fetch('/api/contracheque/process', {
+      console.log(`=== PROCESSANDO ${files.length} CONTRACHEQUE(S) VIA OCR ===`);
+      
+      const response = await fetch('/api/process-contracheques', {
         method: 'POST',
         body: formData
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setResults(data.results || []);
-        setCurrentStep('results');
-      } else {
-        console.error('Erro ao processar arquivos');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('✅ Contracheques processados:', data);
+        
+        const processedResults = data.resultados.map((resultado: any) => ({
+          colaborador: resultado.dados?.colaborador || 'Erro na extração',
+          periodo: resultado.dados?.periodo || 'Erro na extração',
+          tipoDocumento: resultado.dados?.tipoDocumento || 'Erro na extração',
+          vencimentos: resultado.dados?.vencimentos || '0,00',
+          descontos: resultado.dados?.descontos || '0,00',
+          valorLiquido: resultado.dados?.valorLiquido || '0,00',
+          status: resultado.status,
+          statusValidacao: resultado.dados?.statusValidacao || 'sem_recibo',
+          erro: resultado.erro
+        }));
+        
+        setResults(processedResults);
+        setCurrentStep('results');
+        console.log(`✅ ${processedResults.length} contracheque(s) processado(s)`);
+      } else {
+        throw new Error(data.error || 'Erro desconhecido no processamento');
+      }
+
     } catch (error) {
-      console.error('Erro:', error);
+      console.error('❌ Erro no processamento de contracheques:', error);
+      alert(`Erro no processamento: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+      setCurrentStep('upload');
     } finally {
       setIsProcessing(false);
     }
@@ -930,7 +968,7 @@ function ContrachequeTab() {
                         Clique para selecionar PDFs ou arraste e solte
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Selecione pelo menos 2 arquivos: contracheque e recibo correspondente
+                        Suporta múltiplos arquivos PDF de contracheque
                       </p>
                     </div>
                   </div>
@@ -945,7 +983,7 @@ function ContrachequeTab() {
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={clearAllFiles}
+                      onClick={() => setFiles([])}
                       className="text-red-600 hover:text-red-700"
                     >
                       <X className="h-3 w-3 mr-1" />
@@ -966,7 +1004,7 @@ function ContrachequeTab() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => removeFile(index)}
+                          onClick={() => setFiles(prev => prev.filter((_, i) => i !== index))}
                           className="text-red-600 hover:text-red-700 h-6 w-6 p-0"
                         >
                           <X className="h-3 w-3" />
@@ -981,7 +1019,7 @@ function ContrachequeTab() {
               <div className="flex justify-center">
                 <Button
                   onClick={processFiles}
-                  disabled={files.length < 2 || isProcessing}
+                  disabled={files.length === 0 || isProcessing}
                   className="min-w-[200px] h-12 text-lg"
                 >
                   {isProcessing ? (
@@ -992,7 +1030,7 @@ function ContrachequeTab() {
                   ) : (
                     <>
                       <FileText className="h-5 w-5 mr-2" />
-                      Processar Ponto(s)
+                      Validar Contracheques
                     </>
                   )}
                 </Button>
@@ -1021,32 +1059,67 @@ function ContrachequeTab() {
           <CardContent className="p-0">
             <div className="rounded-md border">
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Colaborador</TableHead>
-                    <TableHead>Mês de Referência</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Detalhes</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {results.map((result, index) => (
-                    <TableRow key={index} className="hover:bg-muted/50">
-                      <TableCell className="font-medium">{result.colaborador}</TableCell>
-                      <TableCell>{result.mesReferencia}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={result.status === 'Confere' ? 'default' : 'destructive'}
-                          className="font-mono text-sm px-3 py-1"
-                        >
-                          {result.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{result.detalhes}</TableCell>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Colaborador</TableHead>
+                      <TableHead>Período</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Vencimentos</TableHead>
+                      <TableHead>Descontos</TableHead>
+                      <TableHead>Valor Líquido</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {results.filter(result => result.tipoDocumento === 'Contracheque').map((result, index) => (
+                      <TableRow key={index} className="hover:bg-muted/50">
+                        <TableCell className="font-medium">{result.colaborador}</TableCell>
+                        <TableCell>{result.periodo}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="default"
+                            className="bg-blue-100 text-blue-800"
+                          >
+                            {result.tipoDocumento}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-green-600 font-mono">R$ {result.vencimentos}</TableCell>
+                        <TableCell className="text-red-600 font-mono">R$ {result.descontos}</TableCell>
+                        <TableCell className="text-blue-600 font-mono font-bold">R$ {result.valorLiquido}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={result.statusValidacao === 'confere' ? 'default' : result.statusValidacao === 'nao_confere' ? 'destructive' : 'secondary'}
+                            className={
+                              result.statusValidacao === 'confere' ? 'bg-green-100 text-green-800' : 
+                              result.statusValidacao === 'nao_confere' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }
+                          >
+                            {result.statusValidacao === 'confere' ? (
+                              <>
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Confere
+                              </>
+                            ) : result.statusValidacao === 'nao_confere' ? (
+                              <>
+                                <AlertCircle className="h-3 w-3 mr-1" />
+                                Não Confere
+                              </>
+                            ) : (
+                              <>
+                                <Clock className="h-3 w-3 mr-1" />
+                                Sem Recibo
+                              </>
+                            )}
+                          </Badge>
+                          {result.erro && (
+                            <div className="text-xs text-red-600 mt-1">{result.erro}</div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
             </div>
           </CardContent>
         </Card>

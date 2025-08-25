@@ -51,7 +51,10 @@ export async function POST(request: NextRequest) {
 
     try {
       // Executar script Python para processar contracheques
-      const pythonScript = join(process.cwd(), '..', 'processador_contracheque.py');
+      const pythonScript = join(process.cwd(), 'processador_contracheque.py');
+      
+      console.log('🔍 Debug - Caminho do script:', pythonScript);
+      console.log('🔍 Debug - Diretório atual:', process.cwd());
       
       // Verificar se o script Python existe
       if (!existsSync(pythonScript)) {
@@ -133,31 +136,49 @@ function parsePythonOutput(output: string): Array<{
       }];
     }
     
-    // Tentar fazer parse do JSON - procurar por qualquer linha que contenha JSON válido
+    // Tentar fazer parse do JSON - procurar e concatenar todas as linhas do JSON
     const lines = output.trim().split('\n');
-    let jsonLine = '';
+    let jsonStartIndex = -1;
+    let jsonEndIndex = -1;
     
     console.log(`📝 Analisando ${lines.length} linhas...`);
+    
+    // Encontrar início do JSON
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const trimmedLine = line.trim();
-      console.log(`   Linha ${i + 1}: "${trimmedLine}"`);
-      
+      const trimmedLine = lines[i].trim();
       if (trimmedLine.startsWith('[') || trimmedLine.startsWith('{')) {
-        jsonLine = trimmedLine;
-        console.log(`✅ JSON encontrado na linha ${i + 1}:`, jsonLine);
+        jsonStartIndex = i;
+        console.log(`✅ Início do JSON encontrado na linha ${i + 1}`);
         break;
       }
     }
     
-    if (jsonLine) {
+    // Encontrar fim do JSON
+    if (jsonStartIndex !== -1) {
+      for (let i = lines.length - 1; i >= jsonStartIndex; i--) {
+        const trimmedLine = lines[i].trim();
+        if (trimmedLine.endsWith(']') || trimmedLine.endsWith('}')) {
+          jsonEndIndex = i;
+          console.log(`✅ Fim do JSON encontrado na linha ${i + 1}`);
+          break;
+        }
+      }
+    }
+    
+    if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+      // Concatenar todas as linhas do JSON
+      const jsonLines = lines.slice(jsonStartIndex, jsonEndIndex + 1);
+      const fullJson = jsonLines.join('');
+      
+      console.log('🔍 JSON completo extraído:', fullJson.substring(0, 200) + '...');
+      
       try {
-        const parsed = JSON.parse(jsonLine);
+        const parsed = JSON.parse(fullJson);
         console.log('✅ JSON parseado com sucesso:', parsed);
         return parsed;
       } catch (parseError) {
         console.error('❌ Erro ao fazer parse do JSON:', parseError);
-        console.error('   JSON problemático:', jsonLine);
+        console.error('   JSON problemático:', fullJson);
         throw parseError;
       }
     }
