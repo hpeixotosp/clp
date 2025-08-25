@@ -94,7 +94,7 @@ export function RefisClient({ initialRefis, marcasDisponiveis: initialMarcas, in
       console.error(error);
       alert((error as Error).message);
     }
-  };
+  }, [siglasData.length]);
 
   const getSiglaDescricao = (sigla: string) => {
     const siglaInfo = siglasData.find(s => s.sigla === sigla);
