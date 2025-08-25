@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { ColaboradoresManager } from "@/components/ColaboradoresManager";
+import ColaboradoresManager from "@/components/ColaboradoresManager";
 
 export default function TICPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
