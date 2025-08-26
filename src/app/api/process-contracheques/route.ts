@@ -72,11 +72,36 @@ export async function POST(request: NextRequest) {
         }
         
         console.log('Output do processador:', stdout);
+        console.log('Tamanho do output:', stdout.length);
+        console.log('Primeiros 500 caracteres:', stdout.substring(0, 500));
+        
+        // Verificar se o output contém JSON válido
+        if (!stdout.trim()) {
+          throw new Error('Output do processador Python está vazio');
+        }
+        
+        // Tentar extrair apenas a parte JSON do output
+        let jsonString = stdout.trim();
+        const jsonStart = jsonString.indexOf('[');
+        const jsonEnd = jsonString.lastIndexOf(']');
+        
+        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+          jsonString = jsonString.substring(jsonStart, jsonEnd + 1);
+          console.log('JSON extraído:', jsonString);
+        } else {
+          console.warn('Não foi possível encontrar JSON válido no output');
+        }
         
         // Processar resultado JSON do Python
-        const resultadosPython = JSON.parse(stdout);
+        const resultadosPython = JSON.parse(jsonString);
+        
+        console.log('Resultados Python parseados:', resultadosPython);
+        console.log('Tipo dos resultados:', typeof resultadosPython);
+        console.log('É array?', Array.isArray(resultadosPython));
         
         for (const resultado of resultadosPython) {
+          console.log('Processando resultado individual:', resultado);
+          
           const dadosProcessados = {
             colaborador: resultado.colaborador || 'Não identificado',
             periodo: resultado.mesReferencia || 'Não identificado',
@@ -87,6 +112,8 @@ export async function POST(request: NextRequest) {
             statusValidacao: resultado.status === 'Confere' ? 'confere' : 'nao_confere',
             processadoEm: new Date().toISOString()
           };
+          
+          console.log('Dados processados:', dadosProcessados);
           
           const chave = `${dadosProcessados.colaborador}_${dadosProcessados.periodo}`;
           contracheques.set(chave, dadosProcessados);

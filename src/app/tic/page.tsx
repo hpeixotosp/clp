@@ -829,6 +829,8 @@ function ContrachequeTab() {
     erro?: string;
   }>>([]);
   const [currentStep, setCurrentStep] = useState<'upload' | 'processing' | 'results'>('upload');
+  const [progressValue, setProgressValue] = useState(0);
+  const [progressMessage, setProgressMessage] = useState('');
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files || []);
@@ -858,6 +860,8 @@ function ContrachequeTab() {
     
     setIsProcessing(true);
     setCurrentStep('processing');
+    setProgressValue(0);
+    setProgressMessage('Iniciando processamento...');
     
     try {
       const formData = new FormData();
@@ -867,10 +871,22 @@ function ContrachequeTab() {
 
       console.log(`=== PROCESSANDO ${files.length} CONTRACHEQUE(S) VIA OCR ===`);
       
+      // Progresso: preparando arquivos
+      setProgressValue(20);
+      setProgressMessage('Preparando arquivos para processamento...');
+      
+      // Progresso: enviando para processamento
+      setProgressValue(40);
+      setProgressMessage('Enviando arquivos para análise OCR...');
+      
       const response = await fetch('/api/process-contracheques', {
         method: 'POST',
         body: formData
       });
+
+      // Progresso: processando resposta
+      setProgressValue(70);
+      setProgressMessage('Processando resultados...');
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -880,6 +896,10 @@ function ContrachequeTab() {
       
       if (data.success) {
         console.log('✅ Contracheques processados:', data);
+        
+        // Progresso: formatando resultados
+        setProgressValue(90);
+        setProgressMessage('Formatando resultados...');
         
         const processedResults = data.resultados.map((resultado: any) => ({
           colaborador: resultado.dados?.colaborador || 'Erro na extração',
@@ -893,9 +913,16 @@ function ContrachequeTab() {
           erro: resultado.erro
         }));
         
-        setResults(processedResults);
-        setCurrentStep('results');
-        console.log(`✅ ${processedResults.length} contracheque(s) processado(s)`);
+        // Progresso: finalizando
+        setProgressValue(100);
+        setProgressMessage('Processamento concluído!');
+        
+        // Pequeno delay para mostrar 100% antes de mudar para resultados
+        setTimeout(() => {
+          setResults(processedResults);
+          setCurrentStep('results');
+          console.log(`✅ ${processedResults.length} contracheque(s) processado(s)`);
+        }, 500);
       } else {
         throw new Error(data.error || 'Erro desconhecido no processamento');
       }
@@ -1040,13 +1067,20 @@ function ContrachequeTab() {
 
           {/* Estado de Processamento */}
           {currentStep === 'processing' && (
-            <div className="bg-muted p-4 rounded-lg">
+            <div className="bg-muted p-6 rounded-lg space-y-4">
               <div className="flex items-center gap-2 mb-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span className="font-medium">Processando via Python...</span>
               </div>
-              <div className="text-sm text-muted-foreground">
-                Validando contracheques e recibos...
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">{progressMessage}</span>
+                  <span className="text-muted-foreground">{progressValue}%</span>
+                </div>
+                <Progress value={progressValue} className="h-2" />
+                <p className="text-xs text-muted-foreground text-center">
+                  Validando contracheques e recibos... Aguarde
+                </p>
               </div>
             </div>
           )}
