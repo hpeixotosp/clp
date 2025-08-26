@@ -1,12 +1,16 @@
 # Etapa 1: Mudar para uma base Debian (slim) que é mais robusta que Alpine
 FROM node:20-slim
 
-# Instalar Python, PIP, VENV e as ferramentas de build essenciais via apt-get
+# Instalar Python, PIP, VENV, Tesseract OCR e as ferramentas de build essenciais via apt-get
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
     python3-venv \
     build-essential \
+    tesseract-ocr \
+    tesseract-ocr-por \
+    tesseract-ocr-eng \
+    poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Definir o diretório de trabalho

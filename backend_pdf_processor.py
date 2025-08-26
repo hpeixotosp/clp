@@ -356,6 +356,28 @@ class PontoProcessor:
             return ""
         except Exception as e:
             print(f"Erro durante OCR: {e}", file=sys.stderr)
+            
+            # Verificar se é erro específico do Tesseract
+            if "tesseract is not installed" in str(e) or "TesseractNotFoundError" in str(type(e).__name__):
+                print("FALLBACK: Tesseract não disponível, tentando extração alternativa...", file=sys.stderr)
+                # Tentar extrair texto usando apenas pdfplumber como fallback
+                try:
+                    import pdfplumber
+                    fallback_text = ""
+                    with pdfplumber.open(pdf_path) as pdf:
+                        for page in pdf.pages:
+                            page_text = page.extract_text()
+                            if page_text:
+                                fallback_text += page_text + "\n"
+                    
+                    if fallback_text.strip():
+                        print(f"FALLBACK: Texto extraído com pdfplumber: {len(fallback_text)} caracteres", file=sys.stderr)
+                        return fallback_text
+                    else:
+                        print("FALLBACK: Nenhum texto extraído com pdfplumber", file=sys.stderr)
+                except Exception as fallback_error:
+                    print(f"FALLBACK: Erro no fallback pdfplumber: {fallback_error}", file=sys.stderr)
+            
             import traceback
             traceback.print_exc()
             return ""
