@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["python311", "nodejs20", "npm", "tesseract"]
+nixPkgs = ["python311", "nodejs20", "npm", "tesseract", "poppler_utils"]
 
 [phases.install]
 cmds = ["npm install", "pip install -r requirements.txt"]

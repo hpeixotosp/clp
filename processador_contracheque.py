@@ -64,6 +64,10 @@ def extract_colaborador_name(text):
     
     # Padrões para encontrar nome do colaborador
     patterns = [
+        # Padrão específico para SISPAG - nome após "Nome:"
+        r'Nome:\s*([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][a-záàâãéêíóôõúç\s]+?)(?=\s*(?:Agência|Conta|CPF|RG|$))',
+        # Padrão para nome em recibos SISPAG
+        r'SISPAG\s+SALARIOS[\s\S]*?Nome:\s*([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][a-záàâãéêíóôõúç\s]+?)(?=\s*(?:Agência|Conta))',
         # Padrão específico para OCR - nome seguido de matrícula (6 dígitos)
         r'([A-Z][A-Z\s]+)\s+\d{6}',
         # Padrão específico para o formato do contracheque (nome seguido de números)
@@ -248,10 +252,15 @@ def extract_valores(text):
     
     if valores['liquido'] == '0,00':
         liq_patterns = [
+            # Padrões específicos para SISPAG
+            r'SISPAG\s+SALARIOS[\s\S]*?Valor:\s*R?\$?\s*' + money_pattern,
+            r'Valor:\s*R?\$?\s*' + money_pattern,
             r'(?:valor|total)\s*l[íi]quido\s*:?\s*R?\$?\s*' + money_pattern,
             r'l[íi]quido\s*:?\s*R?\$?\s*' + money_pattern,
             r'Valor:\s*\n?\s*R?\$?\s*' + money_pattern,
-            r'(?:^|\n)Valor:\s*R?\$?\s*' + money_pattern
+            r'(?:^|\n)Valor:\s*R?\$?\s*' + money_pattern,
+            # Padrão mais flexível para valores em recibos
+            r'(?:Valor|VALOR)\s*:?\s*R?\$?\s*' + money_pattern
         ]
         
         for pattern in liq_patterns:

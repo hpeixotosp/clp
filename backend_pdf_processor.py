@@ -343,8 +343,12 @@ class PontoProcessor:
                 # Converter para PIL Image
                 img = Image.open(io.BytesIO(img_data))
                 
-                # Extrair texto da imagem usando OCR
-                page_text = pytesseract.image_to_string(img, lang='eng')
+                # Extrair texto da imagem usando OCR (português + inglês)
+                try:
+                    page_text = pytesseract.image_to_string(img, lang='por+eng')
+                except:
+                    # Fallback para apenas inglês se português não estiver disponível
+                    page_text = pytesseract.image_to_string(img, lang='eng')
                 ocr_text += page_text + "\n"
             
             doc.close()
