@@ -24,7 +24,16 @@ def extract_text_from_pdf(pdf_path):
     """
     try:
         processor = backend_pdf_processor.PontoProcessor()
-        text = processor.extract_text_with_ocr(pdf_path)
+        # Primeiro tentar extração normal
+        text = processor.extract_text_from_pdf(pdf_path)
+        
+        # Se o texto for muito pequeno ou não contém letras, tentar OCR
+        if len(text.strip()) < 100 or not re.search(r'[A-Za-z]', text):
+            print(f"Texto extraído insuficiente, tentando OCR...", file=sys.stderr)
+            ocr_text = processor.extract_text_with_ocr(pdf_path)
+            if len(ocr_text) > len(text):
+                text = ocr_text
+        
         print(f"Texto extraído de {pdf_path} usando backend_pdf_processor", file=sys.stderr)
         return text
     

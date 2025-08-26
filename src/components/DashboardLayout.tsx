@@ -42,8 +42,7 @@ const menuItems = [
   { name: "Demandas", href: "/demandas", icon: Inbox },
   { name: "Purificadores", href: "/purificadores", icon: FlaskConical },
   { name: "Refis", href: "/refis", icon: Package2 },
-          { name: "TR - Elaborar", href: "/tr", icon: FileText },
-        { name: "TR - Analisar", href: "/tr-analisar", icon: Search },
+  { name: "TR - Analisar", href: "/tr-analisar", icon: Search },
   { name: "Análise proposta", href: "/analise-proposta", icon: FileBarChart },
   { name: "TIC", href: "/tic", icon: Cpu },
 ];
