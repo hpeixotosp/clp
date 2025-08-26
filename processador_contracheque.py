@@ -386,13 +386,16 @@ def classify_document_type(text):
     """
     Classifica se o documento é contracheque ou recibo
     """
-    contracheque_keywords = ['contracheque', 'folha de pagamento', 'vencimentos', 'descontos']
-    recibo_keywords = ['recibo', 'comprovante', 'depósito', 'transferência']
+    contracheque_keywords = ['contracheque', 'folha de pagamento', 'vencimentos', 'descontos', 'inss', 'irrf', 'salário', 'gratificação']
+    recibo_keywords = ['recibo', 'comprovante', 'depósito', 'transferência', 'ted', 'doc', 'pix', 'banco', 'agência', 'conta corrente']
     
     text_lower = text.lower()
     
     contracheque_score = sum(1 for keyword in contracheque_keywords if keyword in text_lower)
     recibo_score = sum(1 for keyword in recibo_keywords if keyword in text_lower)
+    
+    print(f"🏷️ DEBUG_CLASSIFICACAO - Score contracheque: {contracheque_score} (palavras: {[k for k in contracheque_keywords if k in text_lower]})", file=sys.stderr)
+    print(f"🏷️ DEBUG_CLASSIFICACAO - Score recibo: {recibo_score} (palavras: {[k for k in recibo_keywords if k in text_lower]})", file=sys.stderr)
     
     if contracheque_score > recibo_score:
         return 'contracheque'
@@ -413,6 +416,9 @@ def process_documents(pdf_paths):
         for pdf_path in pdf_paths:
             text = extract_text_from_pdf(pdf_path)
             doc_type = classify_document_type(text)
+            print(f"📄 DEBUG_CLASSIFICACAO - Arquivo: {pdf_path}", file=sys.stderr)
+            print(f"📄 DEBUG_CLASSIFICACAO - Tipo identificado: {doc_type}", file=sys.stderr)
+            print(f"📄 DEBUG_CLASSIFICACAO - Primeiros 300 chars: {text[:300]}", file=sys.stderr)
             documents.append({
                 'path': pdf_path,
                 'text': text,
@@ -449,16 +455,25 @@ def process_documents(pdf_paths):
             dados_bancarios_recibo = None
             valor_depositado = None
             
-            for recibo in recibos:
+            print(f"🔍 DEBUG_VALIDACAO - Procurando recibo para colaborador: '{colaborador}'", file=sys.stderr)
+            print(f"🔍 DEBUG_VALIDACAO - Total de recibos disponíveis: {len(recibos)}", file=sys.stderr)
+            
+            for i, recibo in enumerate(recibos):
                 recibo_text = recibo['text']
+                print(f"🔍 DEBUG_VALIDACAO - Verificando recibo {i+1}: primeiros 200 chars: {recibo_text[:200]}", file=sys.stderr)
+                
                 # Verificar se o nome do colaborador aparece no recibo
                 if colaborador and colaborador.lower() in recibo_text.lower():
+                    print(f"✅ DEBUG_VALIDACAO - Recibo correspondente encontrado para '{colaborador}'", file=sys.stderr)
                     recibo_correspondente = recibo
                     dados_bancarios_recibo = extract_dados_bancarios(recibo_text)
                     # Extrair valor depositado do recibo
                     valores_recibo = extract_valores(recibo_text)
                     valor_depositado = valores_recibo.get('liquido')
+                    print(f"💰 DEBUG_VALIDACAO - Valor no recibo: '{valor_depositado}'", file=sys.stderr)
                     break
+                else:
+                    print(f"❌ DEBUG_VALIDACAO - Recibo {i+1} não corresponde ao colaborador '{colaborador}'", file=sys.stderr)
             
             # Determinar status final
             status = "Não confere"
@@ -471,18 +486,42 @@ def process_documents(pdf_paths):
                 detalhes.append("Cálculo incorreto: líquido ≠ vencimentos - descontos")
             
             if recibo_correspondente:
+                print(f"✅ DEBUG_VALIDACAO - Recibo encontrado, iniciando comparação de valores", file=sys.stderr)
+                print(f"💰 DEBUG_VALIDACAO - Valor líquido contracheque: '{valores['liquido']}'", file=sys.stderr)
+                print(f"💰 DEBUG_VALIDACAO - Valor depositado recibo: '{valor_depositado}'", file=sys.stderr)
+                print(f"🧮 DEBUG_VALIDACAO - Cálculo OK: {calculo_ok}", file=sys.stderr)
+                
                 # Comparar valores
                 valor_ok = True
                 if valor_depositado and valores['liquido']:
-                    if abs(normalize_money_value(valor_depositado) - normalize_money_value(valores['liquido'])) > 0.01:
+                    valor_contracheque_norm = normalize_money_value(valores['liquido'])
+                    valor_recibo_norm = normalize_money_value(valor_depositado)
+                    diferenca = abs(valor_contracheque_norm - valor_recibo_norm)
+                    
+                    print(f"🔢 DEBUG_VALIDACAO - Valor contracheque normalizado: {valor_contracheque_norm}", file=sys.stderr)
+                    print(f"🔢 DEBUG_VALIDACAO - Valor recibo normalizado: {valor_recibo_norm}", file=sys.stderr)
+                    print(f"🔢 DEBUG_VALIDACAO - Diferença: {diferenca}", file=sys.stderr)
+                    
+                    if diferenca > 0.01:
                         valor_ok = False
-                        detalhes.append("Valor depositado diferente do valor líquido")
+                        detalhes.append(f"Valor depositado ({valor_depositado}) diferente do valor líquido ({valores['liquido']}) - diferença: {diferenca}")
+                        print(f"❌ DEBUG_VALIDACAO - Valores não conferem - diferença: {diferenca}", file=sys.stderr)
+                    else:
+                        print(f"✅ DEBUG_VALIDACAO - Valores conferem - diferença: {diferenca}", file=sys.stderr)
+                else:
+                    print(f"⚠️ DEBUG_VALIDACAO - Um dos valores está vazio - recibo: '{valor_depositado}', contracheque: '{valores['liquido']}'", file=sys.stderr)
+                
+                print(f"📊 DEBUG_VALIDACAO - Resumo validação: calculo_ok={calculo_ok}, valor_ok={valor_ok}, colaborador='{colaborador}'", file=sys.stderr)
                 
                 if calculo_ok and valor_ok and colaborador:
                     status = "Confere"
                     detalhes = ["Validação bem-sucedida"]
+                    print(f"✅ DEBUG_VALIDACAO - Status final: CONFERE", file=sys.stderr)
+                else:
+                    print(f"❌ DEBUG_VALIDACAO - Status final: NÃO CONFERE - motivos: calculo_ok={calculo_ok}, valor_ok={valor_ok}, colaborador='{colaborador}'", file=sys.stderr)
             else:
                 detalhes.append("Recibo correspondente não encontrado")
+                print(f"❌ DEBUG_VALIDACAO - Nenhum recibo correspondente encontrado", file=sys.stderr)
             
             # Adicionar resultado
             results.append({
