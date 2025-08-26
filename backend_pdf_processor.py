@@ -904,22 +904,27 @@ class PontoProcessor:
         return f"{sign}{hours:02d}:{mins:02d}"
     
     def save_to_csv(self, results: List[Dict], output_path: str):
-        """Salva resultados em CSV"""
+        """Salva resultados em CSV - APENAS colaboradores válidos"""
         try:
-            # Preparar dados para CSV - apenas o resumo principal
+            # Preparar dados para CSV - apenas o resumo principal E colaboradores válidos
             csv_data = []
             for result in results:
                 if 'error' not in result:
-                    # Apenas o resumo principal, sem detalhes diários
-                    csv_data.append({
-                        'colaborador': result['colaborador'],
-                        'periodo': result['periodo'],
-                        'previsto': result['previsto'],
-                        'realizado': result['realizado'],
-                        'saldo': result['saldo'],
-                        'assinatura': 'Sim' if result['assinatura'] else 'Não',
-                        'saldo_minutos': result['saldo_minutos']
-                    })
+                    # VALIDAÇÃO FINAL: Só incluir colaboradores válidos
+                    if self.validate_colaborador_name(result['colaborador']):
+                        # Apenas o resumo principal, sem detalhes diários
+                        csv_data.append({
+                            'colaborador': result['colaborador'],
+                            'periodo': result['periodo'],
+                            'previsto': result['previsto'],
+                            'realizado': result['realizado'],
+                            'saldo': result['saldo'],
+                            'assinatura': 'Sim' if result['assinatura'] else 'Não',
+                            'saldo_minutos': result['saldo_minutos']
+                        })
+                        print(f"✅ Colaborador '{result['colaborador']}' incluído no CSV", file=sys.stderr)
+                    else:
+                        print(f"❌ Colaborador '{result['colaborador']}' EXCLUÍDO do CSV (não está na lista válida)", file=sys.stderr)
             
             print(f"Preparando {len(csv_data)} registros para CSV")
             
@@ -949,22 +954,24 @@ class PontoProcessor:
             print(f"Caminho tentado: {output_path}")
             raise
         
-        # Salvar detalhes diários em arquivo separado (opcional)
+        # Salvar detalhes diários em arquivo separado (opcional) - APENAS colaboradores válidos
         detalhes_path = output_path.replace('.csv', '_detalhes.csv')
         detalhes_data = []
         for result in results:
             if 'error' not in result:
-                for dia in result['dias_processados']:
-                    detalhes_data.append({
-                        'colaborador': result['colaborador'],
-                        'periodo': result['periodo'],
-                        'data': dia['data'],
-                        'tipo_dia': dia['tipo'],
-                        'cpre': dia['cpre'],
-                        'realizado': dia['realizado'],
-                        'cpre_minutos': dia['cpre_minutos'],
-                        'realizado_minutos': dia['realizado_minutos']
-                    })
+                # VALIDAÇÃO FINAL: Só incluir colaboradores válidos nos detalhes também
+                if self.validate_colaborador_name(result['colaborador']):
+                    for dia in result['dias_processados']:
+                        detalhes_data.append({
+                            'colaborador': result['colaborador'],
+                            'periodo': result['periodo'],
+                            'data': dia['data'],
+                            'tipo_dia': dia['tipo'],
+                            'cpre': dia['cpre'],
+                            'realizado': dia['realizado'],
+                            'cpre_minutos': dia['cpre_minutos'],
+                            'realizado_minutos': dia['realizado_minutos']
+                        })
         
         if detalhes_data:
             df_detalhes = pd.DataFrame(detalhes_data)

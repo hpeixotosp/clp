@@ -50,12 +50,13 @@ def extract_colaborador_name(text):
     # Mostrar algumas linhas do texto para debug
     lines = text.split('\n')[:10]
     # print(f"🔍 DEBUG_LINHAS - Primeiras 10 linhas:", file=sys.stderr)
-    for i, line in enumerate(lines, 1):
-        # print(f"  {i}: {repr(line)}", file=sys.stderr)
-        pass
+    # for i, line in enumerate(lines, 1):
+    #     print(f"  {i}: {repr(line)}", file=sys.stderr)
     
     # Padrões para encontrar nome do colaborador
     patterns = [
+        # Padrão específico para OCR - nome seguido de matrícula (6 dígitos)
+        r'([A-Z][A-Z\s]+)\s+\d{6}',
         # Padrão específico para o formato do contracheque (nome seguido de números)
         r'([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÇ\s]+)\s+\d{6}\s+\d+',
         # Padrões específicos para contracheques
