@@ -43,45 +43,36 @@ def extract_text_from_pdf(pdf_path):
 
 def extract_colaborador_name(text):
     """Extrai o nome do colaborador do texto"""
-    # print(f"🔍 DEBUG_TEXTO - Entrada (1000 chars): {repr(text[:1000])}", file=sys.stderr)
-    # print(f"🔍 DEBUG_TEXTO - Tamanho total: {len(text)} caracteres", file=sys.stderr)
-    
-    # Salvar texto extraído para debug
-    import time
-    debug_file = f"debug_texto_{int(time.time())}.txt"
-    try:
-        with open(debug_file, 'w', encoding='utf-8') as f:
-            f.write(text)
-        # print(f"🔍 DEBUG_SAVE - Texto salvo em: {debug_file}", file=sys.stderr)
-    except Exception as e:
-        print(f"❌ DEBUG_SAVE - Erro ao salvar: {e}", file=sys.stderr)
+    print(f"🔍 DEBUG_NOME - Iniciando extração de nome...", file=sys.stderr)
+    print(f"🔍 DEBUG_NOME - Tamanho do texto: {len(text)} caracteres", file=sys.stderr)
     
     # Mostrar algumas linhas do texto para debug
-    lines = text.split('\n')[:10]
-    # print(f"🔍 DEBUG_LINHAS - Primeiras 10 linhas:", file=sys.stderr)
-    # for i, line in enumerate(lines, 1):
-    #     print(f"  {i}: {repr(line)}", file=sys.stderr)
+    lines = text.split('\n')[:15]
+    print(f"🔍 DEBUG_NOME - Primeiras 15 linhas:", file=sys.stderr)
+    for i, line in enumerate(lines, 1):
+        if line.strip():  # Só mostrar linhas não vazias
+            print(f"  {i}: {repr(line.strip())}", file=sys.stderr)
     
-    # Padrões para encontrar nome do colaborador
+    # Padrões para encontrar nome do colaborador (ordenados por prioridade)
     patterns = [
         # Padrão específico para SISPAG - nome após "Nome:"
-        r'Nome:\s*([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][a-záàâãéêíóôõúç\s]+?)(?=\s*(?:Agência|Conta|CPF|RG|$))',
+        r'Nome:\s*([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][a-záàâãéêíóôõúç\s]+?)(?=\s*(?:Agência|Conta|CPF|RG|Matrícula|$))',
         # Padrão para nome em recibos SISPAG
         r'SISPAG\s+SALARIOS[\s\S]*?Nome:\s*([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][a-záàâãéêíóôõúç\s]+?)(?=\s*(?:Agência|Conta))',
-        # Padrão específico para OCR - nome seguido de matrícula (6 dígitos)
-        r'([A-Z][A-Z\s]+)\s+\d{6}',
+        # Padrões específicos para contracheques com palavras-chave
+        r'(?:nome|colaborador|funcionário|servidor)\s*:?\s*([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][a-záàâãéêíóôõúç\s]+?)(?=\s*(?:CPF|RG|Matrícula|Cargo|Função|Período|$))',
+        r'Nome\s*:?\s*([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][a-záàâãéêíóôõúç\s]+?)(?=\s*(?:CPF|RG|Matrícula|Cargo|Função|Período|$))',
+        r'NOME\s*:?\s*([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][a-záàâãéêíóôõúç\s]+?)(?=\s*(?:CPF|RG|Matrícula|Cargo|Função|Período|$))',
+        # Padrão específico para OCR - nome seguido de matrícula (4-6 dígitos)
+        r'([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÇ\s]+?)\s+\d{4,6}(?:\s|$)',
         # Padrão específico para o formato do contracheque (nome seguido de números)
-        r'([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÇ\s]+)\s+\d{6}\s+\d+',
-        # Padrões específicos para contracheques
-        r'(?:nome|colaborador|funcionário|servidor)\s*:?\s*([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][a-záàâãéêíóôõúç\s]+?)(?=\s*(?:CPF|RG|Matrícula|Cargo|Função))',
-        r'Nome\s*:?\s*([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][a-záàâãéêíóôõúç\s]+?)(?=\s*(?:CPF|RG|Matrícula|Cargo|Função))',
-        r'NOME\s*:?\s*([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][a-záàâãéêíóôõúç\s]+?)(?=\s*(?:CPF|RG|Matrícula|Cargo|Função))',
+        r'([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÇ\s]+?)\s+\d{4,6}\s+\d+',
         # Padrão para nomes seguidos de dados pessoais
         r'([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][a-záàâãéêíóôõúç]+(?:\s+[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][a-záàâãéêíóôõúç]+)+)(?=\s*(?:CPF|RG|Matrícula))',
-        # Padrão mais flexível para capturar nomes em linhas
-        r'^\s*([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][a-záàâãéêíóôõúç]+(?:\s+[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][a-záàâãéêíóôõúç]+)+)\s*$',
         # Padrão para nomes após palavras-chave
         r'(?:Funcionário|Servidor|Empregado)\s*:?\s*([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][a-záàâãéêíóôõúç\s]+)',
+        # Padrão mais flexível para capturar nomes em linhas isoladas (2-4 palavras)
+        r'^\s*([A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][a-záàâãéêíóôõúç]+(?:\s+[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][a-záàâãéêíóôõúç]+){1,3})\s*$',
     ]
     
     for i, pattern in enumerate(patterns):
@@ -442,15 +433,39 @@ def process_documents(pdf_paths):
         if not contracheques:
             contracheques = documents
         
+        print(f"📊 DEBUG_PROCESSAMENTO - Total de contracheques identificados: {len(contracheques)}", file=sys.stderr)
+        print(f"📊 DEBUG_PROCESSAMENTO - Total de recibos identificados: {len(recibos)}", file=sys.stderr)
+        
         # Processar cada contracheque
-        for contracheque in contracheques:
-            text = contracheque['text']
-            
-            # Extrair dados do contracheque
-            colaborador = extract_colaborador_name(text)
-            mes_ref = extract_mes_referencia(text)
-            valores = extract_valores(text)
-            dados_bancarios = extract_dados_bancarios(text)
+        for idx, contracheque in enumerate(contracheques):
+            try:
+                print(f"\n🔄 DEBUG_PROCESSAMENTO - Processando contracheque {idx+1}/{len(contracheques)}: {contracheque['path']}", file=sys.stderr)
+                text = contracheque['text']
+                
+                # Verificar se o texto foi extraído corretamente
+                if not text or len(text.strip()) < 50:
+                    print(f"⚠️ DEBUG_PROCESSAMENTO - Texto muito pequeno ou vazio ({len(text)} chars), pulando...", file=sys.stderr)
+                    continue
+                
+                # Extrair dados do contracheque
+                print(f"📝 DEBUG_PROCESSAMENTO - Extraindo nome do colaborador...", file=sys.stderr)
+                colaborador = extract_colaborador_name(text)
+                print(f"📝 DEBUG_PROCESSAMENTO - Nome extraído: '{colaborador}'", file=sys.stderr)
+                
+                # Se não conseguiu extrair o nome, pular este documento
+                if not colaborador:
+                    print(f"❌ DEBUG_PROCESSAMENTO - Nome não encontrado, pulando documento...", file=sys.stderr)
+                    continue
+                
+                print(f"📅 DEBUG_PROCESSAMENTO - Extraindo mês de referência...", file=sys.stderr)
+                mes_ref = extract_mes_referencia(text)
+                print(f"📅 DEBUG_PROCESSAMENTO - Mês extraído: '{mes_ref}'", file=sys.stderr)
+                
+                print(f"💰 DEBUG_PROCESSAMENTO - Extraindo valores...", file=sys.stderr)
+                valores = extract_valores(text)
+                print(f"💰 DEBUG_PROCESSAMENTO - Valores extraídos: {valores}", file=sys.stderr)
+                
+                dados_bancarios = extract_dados_bancarios(text)
             
             # Validar cálculo
             calculo_ok = validate_calculo(
@@ -467,12 +482,58 @@ def process_documents(pdf_paths):
             print(f"🔍 DEBUG_VALIDACAO - Procurando recibo para colaborador: '{colaborador}'", file=sys.stderr)
             print(f"🔍 DEBUG_VALIDACAO - Total de recibos disponíveis: {len(recibos)}", file=sys.stderr)
             
+            # Função para normalizar nomes para comparação
+            def normalize_name_for_comparison(name):
+                if not name:
+                    return ""
+                # Remove acentos, converte para minúsculas e remove espaços extras
+                import unicodedata
+                normalized = unicodedata.normalize('NFD', name.lower())
+                normalized = ''.join(c for c in normalized if unicodedata.category(c) != 'Mn')
+                return ' '.join(normalized.split())
+            
+            colaborador_normalizado = normalize_name_for_comparison(colaborador)
+            print(f"🔍 DEBUG_VALIDACAO - Nome normalizado: '{colaborador_normalizado}'", file=sys.stderr)
+            
             for i, recibo in enumerate(recibos):
                 recibo_text = recibo['text']
                 print(f"🔍 DEBUG_VALIDACAO - Verificando recibo {i+1}: primeiros 200 chars: {recibo_text[:200]}", file=sys.stderr)
                 
-                # Verificar se o nome do colaborador aparece no recibo
-                if colaborador and colaborador.lower() in recibo_text.lower():
+                # Verificar correspondência de várias formas
+                recibo_normalizado = normalize_name_for_comparison(recibo_text)
+                correspondencia_encontrada = False
+                
+                if colaborador and colaborador_normalizado:
+                    # 1. Verificação exata (nome completo)
+                    if colaborador_normalizado in recibo_normalizado:
+                        correspondencia_encontrada = True
+                        print(f"✅ DEBUG_VALIDACAO - Correspondência exata encontrada", file=sys.stderr)
+                    
+                    # 2. Verificação por partes do nome (pelo menos 2 palavras)
+                    elif len(colaborador_normalizado.split()) >= 2:
+                        palavras_colaborador = colaborador_normalizado.split()
+                        # Verificar se pelo menos 2 palavras do nome aparecem no recibo
+                        palavras_encontradas = sum(1 for palavra in palavras_colaborador 
+                                                 if len(palavra) > 2 and palavra in recibo_normalizado)
+                        
+                        if palavras_encontradas >= 2:
+                            correspondencia_encontrada = True
+                            print(f"✅ DEBUG_VALIDACAO - Correspondência parcial encontrada ({palavras_encontradas} palavras)", file=sys.stderr)
+                        else:
+                            print(f"❌ DEBUG_VALIDACAO - Poucas palavras encontradas ({palavras_encontradas})", file=sys.stderr)
+                    
+                    # 3. Verificação pelo primeiro e último nome
+                    elif len(colaborador_normalizado.split()) >= 2:
+                        palavras = colaborador_normalizado.split()
+                        primeiro_nome = palavras[0]
+                        ultimo_nome = palavras[-1]
+                        
+                        if (len(primeiro_nome) > 2 and primeiro_nome in recibo_normalizado and 
+                            len(ultimo_nome) > 2 and ultimo_nome in recibo_normalizado):
+                            correspondencia_encontrada = True
+                            print(f"✅ DEBUG_VALIDACAO - Correspondência por primeiro e último nome", file=sys.stderr)
+                
+                if correspondencia_encontrada:
                     print(f"✅ DEBUG_VALIDACAO - Recibo correspondente encontrado para '{colaborador}'", file=sys.stderr)
                     recibo_correspondente = recibo
                     dados_bancarios_recibo = extract_dados_bancarios(recibo_text)
@@ -532,16 +593,34 @@ def process_documents(pdf_paths):
                 detalhes.append("Recibo correspondente não encontrado")
                 print(f"❌ DEBUG_VALIDACAO - Nenhum recibo correspondente encontrado", file=sys.stderr)
             
-            # Adicionar resultado
-            results.append({
-                'colaborador': colaborador or 'Não identificado',
-                'mesReferencia': mes_ref or 'Não identificado',
-                'vencimentos': valores['vencimentos'] or '0,00',
-                'descontos': valores['descontos'] or '0,00',
-                'liquido': valores['liquido'] or '0,00',
-                'status': status,
-                'detalhes': '; '.join(detalhes) if detalhes else 'Processado'
-            })
+                # Adicionar resultado
+                print(f"✅ DEBUG_PROCESSAMENTO - Adicionando resultado para '{colaborador}' com status '{status}'", file=sys.stderr)
+                results.append({
+                    'colaborador': colaborador or 'Não identificado',
+                    'mesReferencia': mes_ref or 'Não identificado',
+                    'vencimentos': valores['vencimentos'] or '0,00',
+                    'descontos': valores['descontos'] or '0,00',
+                    'liquido': valores['liquido'] or '0,00',
+                    'status': status,
+                    'detalhes': '; '.join(detalhes) if detalhes else 'Processado'
+                })
+                
+            except Exception as e:
+                print(f"❌ DEBUG_PROCESSAMENTO - Erro ao processar contracheque {idx+1}: {str(e)}", file=sys.stderr)
+                import traceback
+                traceback.print_exc(file=sys.stderr)
+                
+                # Adicionar resultado de erro para este documento específico
+                results.append({
+                    'colaborador': f'Erro no documento {idx+1}',
+                    'mesReferencia': 'N/A',
+                    'vencimentos': '0,00',
+                    'descontos': '0,00',
+                    'liquido': '0,00',
+                    'status': 'Erro',
+                    'detalhes': f'Erro no processamento: {str(e)}'
+                })
+                continue  # Continuar com o próximo documento
     
     except Exception as e:
         results.append({
