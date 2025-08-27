@@ -265,81 +265,64 @@ class PontoProcessor:
         return nome, "Não encontrado"
     
     def check_digital_signature(self, text: str, pdf_path: str = None) -> bool:
-        """Verifica se o documento tem assinatura digital - COM OCR MELHORADO"""
-        # Padrões específicos para detectar assinatura digital
-        patterns = [
-            r'assinado\s+digitalmente',
-            r'assinatura\s+digital',
-            r'assinado\s+eletronicamente',
-            r'assinatura\s+eletrônica',
-            r'certificado\s+digital',
-            r'documento\s+assinado\s+digitalmente',
-            r'ponto\s+assinado\s+digitalmente',
-            r'validação\s+digital',
-            r'autenticação\s+digital'
-        ]
-        
-        # Padrões para detectar texto de assinatura em imagens
-        image_signature_patterns = [
-            r'assinado',
-            r'assinatura',
-            r'digital',
-            r'certificado',
-            r'validado',
-            r'autenticado',
-            r'cpf\s*:\s*\d{3}\.\d{3}\.\d{3}-\d{2}',  # CPF formatado
-            r'\d{3}\.\d{3}\.\d{3}-\d{2}',  # CPF sem label
-            r'colaborador\s+assinou',
-            r'documento\s+válido'
-        ]
-        
+        """Verifica se o documento tem assinatura - FOCO EM 'ASSINADO'"""
         text_lower = text.lower()
         
-        # Verificar se algum dos padrões está presente no texto extraído
-        for pattern in patterns:
+        # PRIMEIRA PRIORIDADE: Procurar diretamente por "assinado" no texto extraído
+        if 'assinado' in text_lower:
+            print(f"✅ ASSINATURA DETECTADA: Palavra 'assinado' encontrada no texto")
+            return True
+        
+        # SEGUNDA PRIORIDADE: Outros padrões comuns de assinatura
+        simple_patterns = [
+            r'assinado',
+            r'assinatura\s*(digital|eletrônica)',
+            r'documento\s*assinado',
+            r'digitalmente\s*assinado',
+            r'pré-assinado',
+            r'pre-assinado'
+        ]
+        
+        for pattern in simple_patterns:
             if re.search(pattern, text_lower):
-                print(f"Assinatura digital detectada no texto: {pattern}")
+                print(f"✅ ASSINATURA DETECTADA no texto: {pattern}")
                 return True
         
-        # Se não encontrou no texto, tentar OCR nas imagens do PDF
+        # TERCEIRA PRIORIDADE: Se não encontrou no texto, usar OCR nas imagens
         if pdf_path:
-            print(f"Iniciando OCR para detecção de assinatura em imagens: {pdf_path}", file=sys.stderr)
+            print(f"🔍 Executando OCR para buscar 'assinado' nas imagens: {pdf_path}", file=sys.stderr)
             ocr_text = self.extract_text_with_ocr(pdf_path)
             if ocr_text:
                 ocr_text_lower = ocr_text.lower()
-                print(f"Texto extraído via OCR ({len(ocr_text)} chars): {ocr_text[:200]}...", file=sys.stderr)
+                print(f"📄 Texto OCR extraído ({len(ocr_text)} chars): {ocr_text[:300]}...", file=sys.stderr)
                 
-                # Primeiro tentar os padrões completos
-                for pattern in patterns:
-                    if re.search(pattern, ocr_text_lower):
-                        print(f"Assinatura digital detectada via OCR: {pattern}")
-                        return True
+                # Verificar especificamente por "assinado" no texto OCR
+                if 'assinado' in ocr_text_lower:
+                    print(f"✅ ASSINATURA DETECTADA via OCR: Palavra 'assinado' encontrada")
+                    return True
                 
-                # Tentar padrões específicos para imagens
-                for pattern in image_signature_patterns:
+                # Verificar outros padrões no OCR
+                for pattern in simple_patterns:
                     if re.search(pattern, ocr_text_lower):
-                        print(f"Assinatura detectada via OCR (imagem): {pattern}")
+                        print(f"✅ ASSINATURA DETECTADA via OCR: {pattern}")
                         return True
                         
-                # Verificar se há indicações de documento assinado
-                if any(word in ocr_text_lower for word in ['assinado', 'assinatura', 'digital', 'certificado']):
-                    print(f"Possível assinatura detectada via OCR (palavras-chave)")
-                    return True
+                print(f"❌ Palavra 'assinado' não encontrada no OCR", file=sys.stderr)
             else:
-                print("OCR não retornou texto", file=sys.stderr)
+                print("❌ OCR não retornou texto", file=sys.stderr)
         
-        print("Nenhuma assinatura detectada")
+        print("❌ ASSINATURA NÃO DETECTADA")
         return False
     
     def extract_text_with_ocr(self, pdf_path: str) -> str:
-        """Extrai texto de imagens no PDF usando OCR com configurações otimizadas"""
+        """Extrai texto de imagens no PDF usando OCR otimizado para assinatura"""
         try:
             import pytesseract
             import fitz  # PyMuPDF
             from PIL import Image, ImageEnhance, ImageFilter
             import io
             
-            print(f"Executando OCR no arquivo: {pdf_path}", file=sys.stderr)
+            print(f"🔍 Executando OCR otimizado para assinatura: {pdf_path}", file=sys.stderr)
             
             # Configurar caminho do Tesseract se necessário
             try:
@@ -353,6 +336,7 @@ class PontoProcessor:
                 for path in possible_paths:
                     if os.path.exists(path):
                         pytesseract.pytesseract.tesseract_cmd = path
+                        print(f"⚙️ Tesseract configurado: {path}", file=sys.stderr)
                         break
             
             # Abrir PDF com PyMuPDF
@@ -360,62 +344,78 @@ class PontoProcessor:
             
             ocr_text = ""
             for page_num in range(len(doc)):
-                print(f"Processando página {page_num+1} com OCR...", file=sys.stderr)
+                print(f"📄 Processando página {page_num+1} com OCR...", file=sys.stderr)
                 page = doc.load_page(page_num)
                 
-                # Converter página para imagem com alta resolução
-                pix = page.get_pixmap(matrix=fitz.Matrix(3, 3))  # 3x zoom para melhor qualidade
+                # Converter página para imagem com ALTA resolução (4x zoom para melhor OCR)
+                pix = page.get_pixmap(matrix=fitz.Matrix(4, 4))  # 4x zoom
                 img_data = pix.tobytes("png")
                 
                 # Converter para PIL Image
                 img = Image.open(io.BytesIO(img_data))
                 
-                # Pré-processamento da imagem para melhorar OCR
-                # Converter para escala de cinza
+                # Pré-processamento avançado da imagem para melhorar OCR
                 if img.mode != 'L':
-                    img = img.convert('L')
+                    img = img.convert('L')  # Escala de cinza
                 
-                # Aumentar contraste
+                # Aumentar contraste (mais agressivo)
                 enhancer = ImageEnhance.Contrast(img)
-                img = enhancer.enhance(2.0)
+                img = enhancer.enhance(3.0)  # Contraste mais alto
                 
                 # Aumentar nitidez
                 img = img.filter(ImageFilter.SHARPEN)
                 
-                # Configurações do Tesseract para melhor detecção
+                # Configurações otimizadas do Tesseract para assinatura
+                # Permitir mais caracteres incluindo acentos portugueses
                 custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÀÁÂÃÇÉÊÍÓÔÕÚàáâãçéêíóôõú0123456789.,:-/\s'
                 
-                # Extrair texto da imagem usando OCR (português + inglês)
+                # Extrair texto da imagem usando OCR
+                page_text = ""
                 try:
-                    page_text = pytesseract.image_to_string(img, lang='por+eng', config=custom_config)
-                except:
+                    # Primeiro tentar inglês (mais estável)
+                    page_text = pytesseract.image_to_string(img, lang='eng', config=custom_config)
+                    if not page_text.strip():
+                        # Fallback: tentar sem configurações customizadas
+                        page_text = pytesseract.image_to_string(img, lang='eng')
+                except Exception as ocr_error:
+                    print(f"⚠️ Erro no OCR da página {page_num+1}: {ocr_error}", file=sys.stderr)
+                    # Tentar OCR mais simples sem configurações
                     try:
-                        # Fallback para apenas português
-                        page_text = pytesseract.image_to_string(img, lang='por', config=custom_config)
+                        page_text = pytesseract.image_to_string(img)
                     except:
-                        # Fallback para apenas inglês
-                        page_text = pytesseract.image_to_string(img, lang='eng', config=custom_config)
+                        print(f"❌ OCR totalmente falhou na página {page_num+1}", file=sys.stderr)
+                        continue
                 
                 if page_text.strip():
-                    print(f"Página {page_num+1}: {len(page_text)} chars extraídos", file=sys.stderr)
+                    # Log mais detalhado se encontrar texto
+                    print(f"✅ Página {page_num+1}: {len(page_text)} chars extraídos", file=sys.stderr)
+                    if 'assinado' in page_text.lower():
+                        print(f"🎉 PALAVRA 'ASSINADO' ENCONTRADA na página {page_num+1}!", file=sys.stderr)
                     ocr_text += page_text + "\n"
                 else:
-                    print(f"Página {page_num+1}: Nenhum texto extraído", file=sys.stderr)
+                    print(f"❌ Página {page_num+1}: Nenhum texto extraído", file=sys.stderr)
             
             doc.close()
-            print(f"OCR concluído. Texto total extraído: {len(ocr_text)} caracteres", file=sys.stderr)
+            
+            if ocr_text.strip():
+                print(f"✅ OCR concluído. Texto total: {len(ocr_text)} caracteres", file=sys.stderr)
+                # Log das primeiras linhas para debug
+                first_lines = '\n'.join(ocr_text.split('\n')[:5])
+                print(f"📝 Primeiras linhas OCR: {first_lines}", file=sys.stderr)
+            else:
+                print(f"❌ OCR não extraiu nenhum texto", file=sys.stderr)
+            
             return ocr_text
             
         except ImportError as e:
-            print(f"Erro: Dependências OCR não instaladas: {e}", file=sys.stderr)
+            print(f"❌ Erro: Dependências OCR não instaladas: {e}", file=sys.stderr)
             return ""
         except Exception as e:
-            print(f"Erro durante OCR: {e}", file=sys.stderr)
+            print(f"❌ Erro durante OCR: {e}", file=sys.stderr)
             
-            # Verificar se é erro específico do Tesseract
-            if "tesseract is not installed" in str(e) or "TesseractNotFoundError" in str(type(e).__name__):
-                print("FALLBACK: Tesseract não disponível, tentando extração alternativa...", file=sys.stderr)
-                # Tentar extrair texto usando apenas pdfplumber como fallback
+            # FALLBACK melhorado: Usar pdfplumber se OCR falhar
+            if "tesseract" in str(e).lower() or "TesseractNotFoundError" in str(type(e).__name__):
+                print("🔄 FALLBACK: Tesseract não disponível, usando pdfplumber...", file=sys.stderr)
                 try:
                     import pdfplumber
                     fallback_text = ""
@@ -426,15 +426,13 @@ class PontoProcessor:
                                 fallback_text += page_text + "\n"
                     
                     if fallback_text.strip():
-                        print(f"FALLBACK: Texto extraído com pdfplumber: {len(fallback_text)} caracteres", file=sys.stderr)
+                        print(f"✅ FALLBACK: {len(fallback_text)} caracteres extraídos com pdfplumber", file=sys.stderr)
                         return fallback_text
                     else:
-                        print("FALLBACK: Nenhum texto extraído com pdfplumber", file=sys.stderr)
+                        print("❌ FALLBACK: Nenhum texto extraído com pdfplumber", file=sys.stderr)
                 except Exception as fallback_error:
-                    print(f"FALLBACK: Erro no fallback pdfplumber: {fallback_error}", file=sys.stderr)
+                    print(f"❌ FALLBACK falhou: {fallback_error}", file=sys.stderr)
             
-            import traceback
-            traceback.print_exc()
             return ""
     
     def parse_daily_entries(self, text: str) -> List[Dict]:
