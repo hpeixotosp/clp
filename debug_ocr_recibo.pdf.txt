@@ -1,0 +1,20 @@
+tau horas.
+BancoItati-ComprovantedeTransferencia
+decontacorrenteparacontacorrente
+Identificagaionoextrato:SISPAGSALARIOS
+Dadosdacontadebitada:
+Nomedaempresa:TEGHCOMTECNOLOGIAEINFORMATI
+Agncia:6325 Contacorrente:18611-1
+Dadosdacontacreditada:
+Nome:ADRIANOCOSTADESOUZAROQUE
+Agncia:9314 Contacorrente:44879-6
+Valor:R5.418,OO
+Informag6esfornecidaspelo
+pagador:
+Transfer6nciaefetuadaem16/18/225as13:91:4viaSispag,CTRL271546699175.
+Autenticagao:
+A222F7B7BD4A992788876428846FEOEDF795CBE1
+Emcasodeduvidas,depossedocomprovante,conlateseugerenleouaCentralno49961685capitaiseregidesmetropolitanasou.O8O/771685demais
+localidades.Reclamagdes,informagdesecancelamenlos:SACO8GO7281728,24horaspordiaouFaleConosco:www.ilau.com.briempresasSenaoficarsalisfeitocom
+asolugao,conlaleaOuvidoria:689O57OO611,emdiasuleis,das9has18h.Deficienleauditivo/fala:O8O7221722 7
+
