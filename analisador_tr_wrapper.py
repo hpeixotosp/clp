@@ -79,7 +79,7 @@ def main():
             # Remover emojis específicos
             output_limpo = re.sub(r'[🔴🔵🟢✅❌🚀📄🔧📊📝🔄🤖📤📋🎯]', '', result.stdout)
             
-            # Remover outros símbolos unicode desnecessários, mas preservar caracteres latinos
+0            # Remover outros símbolos unicode desnecessários, mas preservar caracteres latinos
             output_final = re.sub(r'[^\x00-\x7F\u00A0-\u017F\u00C0-\u00FF\u0100-\u017F]+', '', output_limpo)
             
             # Garantir que caracteres especiais do português sejam preservados

@@ -315,14 +315,15 @@ class PontoProcessor:
         return False
     
     def extract_text_with_ocr(self, pdf_path: str) -> str:
-        """Extrai texto de imagens no PDF usando OCR otimizado para assinatura"""
+        """Extrai texto de imagens no PDF usando OCR AVANÇADO com múltiplas estratégias"""
         try:
             import pytesseract
             import fitz  # PyMuPDF
-            from PIL import Image, ImageEnhance, ImageFilter
+            from PIL import Image, ImageEnhance, ImageFilter, ImageOps
             import io
+            import numpy as np
             
-            print(f"🔍 Executando OCR otimizado para assinatura: {pdf_path}", file=sys.stderr)
+            print(f"🔍 Executando OCR AVANÇADO: {pdf_path}", file=sys.stderr)
             
             # Configurar caminho do Tesseract se necessário
             try:
@@ -342,98 +343,218 @@ class PontoProcessor:
             # Abrir PDF com PyMuPDF
             doc = fitz.open(pdf_path)
             
-            ocr_text = ""
+            all_ocr_text = ""
+            
             for page_num in range(len(doc)):
-                print(f"📄 Processando página {page_num+1} com OCR...", file=sys.stderr)
+                print(f"📄 Processando página {page_num+1} com OCR AVANÇADO...", file=sys.stderr)
                 page = doc.load_page(page_num)
                 
-                # Converter página para imagem com ALTA resolução (4x zoom para melhor OCR)
-                pix = page.get_pixmap(matrix=fitz.Matrix(4, 4))  # 4x zoom
-                img_data = pix.tobytes("png")
+                # ESTRATÉGIA 1: Múltiplas resoluções para capturar diferentes partes do documento
+                resolutions = [(2, 2), (4, 4), (6, 6)]  # Baixa, média, alta resolução
+                page_texts = []
                 
-                # Converter para PIL Image
-                img = Image.open(io.BytesIO(img_data))
-                
-                # Pré-processamento avançado da imagem para melhorar OCR
-                if img.mode != 'L':
-                    img = img.convert('L')  # Escala de cinza
-                
-                # Aumentar contraste (mais agressivo)
-                enhancer = ImageEnhance.Contrast(img)
-                img = enhancer.enhance(3.0)  # Contraste mais alto
-                
-                # Aumentar nitidez
-                img = img.filter(ImageFilter.SHARPEN)
-                
-                # Configurações otimizadas do Tesseract para assinatura
-                # Permitir mais caracteres incluindo acentos portugueses
-                custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÀÁÂÃÇÉÊÍÓÔÕÚàáâãçéêíóôõú0123456789.,:-/\s'
-                
-                # Extrair texto da imagem usando OCR
-                page_text = ""
-                try:
-                    # Primeiro tentar inglês (mais estável)
-                    page_text = pytesseract.image_to_string(img, lang='eng', config=custom_config)
-                    if not page_text.strip():
-                        # Fallback: tentar sem configurações customizadas
-                        page_text = pytesseract.image_to_string(img, lang='eng')
-                except Exception as ocr_error:
-                    print(f"⚠️ Erro no OCR da página {page_num+1}: {ocr_error}", file=sys.stderr)
-                    # Tentar OCR mais simples sem configurações
+                for res_x, res_y in resolutions:
                     try:
-                        page_text = pytesseract.image_to_string(img)
-                    except:
-                        print(f"❌ OCR totalmente falhou na página {page_num+1}", file=sys.stderr)
+                        print(f"   🔍 Testando resolução {res_x}x{res_y}...", file=sys.stderr)
+                        
+                        # Converter página para imagem com resolução específica
+                        pix = page.get_pixmap(matrix=fitz.Matrix(res_x, res_y))
+                        img_data = pix.tobytes("png")
+                        
+                        # Converter para PIL Image
+                        img = Image.open(io.BytesIO(img_data))
+                        
+                        # ESTRATÉGIA 2: Múltiplos pré-processamentos
+                        processed_images = self._preprocess_image_variants(img)
+                        
+                        for i, processed_img in enumerate(processed_images):
+                            try:
+                                # ESTRATÉGIA 3: Múltiplas configurações do Tesseract
+                                ocr_configs = [
+                                    # Configuração 1: Padrão otimizado para português
+                                    {'lang': 'por', 'config': r'--oem 3 --psm 6'},
+                                    
+                                    # Configuração 2: Inglês com configuração avançada
+                                    {'lang': 'eng', 'config': r'--oem 3 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÀÁÂÃÇÉÊÍÓÔÕÚàáâãçéêíóôõú0123456789.,:-/\s'},
+                                    
+                                    # Configuração 3: Para capturar valores monetários
+                                    {'lang': 'eng', 'config': r'--oem 3 --psm 8 -c tessedit_char_whitelist=0123456789.,'},
+                                    
+                                    # Configuração 4: Para texto livre
+                                    {'lang': 'eng', 'config': r'--oem 3 --psm 3'},
+                                    
+                                    # Configuração 5: Simples sem restrições
+                                    {'lang': 'eng', 'config': r'--oem 3 --psm 6'}
+                                ]
+                                
+                                for config in ocr_configs:
+                                    try:
+                                        text = pytesseract.image_to_string(
+                                            processed_img, 
+                                            lang=config['lang'], 
+                                            config=config['config']
+                                        )
+                                        
+                                        if text.strip() and len(text) > 20:  # Só aceitar textos significativos
+                                            page_texts.append(text)
+                                            print(f"      ✅ Sucesso: {config['lang']} - prep {i+1} - {len(text)} chars", file=sys.stderr)
+                                            
+                                            # Se encontrar valores importantes, destacar
+                                            important_values = ['7.066', '1.648', '5.418', 'Total', 'Líquido', 'Vencimento', 'Desconto']
+                                            for value in important_values:
+                                                if value.lower() in text.lower():
+                                                    print(f"         🎯 VALOR IMPORTANTE ENCONTRADO: {value}", file=sys.stderr)
+                                            
+                                            break  # Se deu certo, não precisa testar outras configs
+                                    except Exception as config_error:
+                                        continue
+                                        
+                            except Exception as prep_error:
+                                continue
+                                
+                    except Exception as res_error:
+                        print(f"   ❌ Erro na resolução {res_x}x{res_y}: {res_error}", file=sys.stderr)
                         continue
                 
-                if page_text.strip():
-                    # Log mais detalhado se encontrar texto
-                    print(f"✅ Página {page_num+1}: {len(page_text)} chars extraídos", file=sys.stderr)
-                    if 'assinado' in page_text.lower():
-                        print(f"🎉 PALAVRA 'ASSINADO' ENCONTRADA na página {page_num+1}!", file=sys.stderr)
-                    ocr_text += page_text + "\n"
+                # ESTRATÉGIA 4: Combinar todos os textos capturados da página
+                if page_texts:
+                    # Escolher o texto mais longo como principal
+                    best_text = max(page_texts, key=len)
+                    all_ocr_text += best_text + "\n"
+                    
+                    print(f"✅ Página {page_num+1}: {len(best_text)} chars extraídos (de {len(page_texts)} tentativas)", file=sys.stderr)
+                    
+                    # Log das primeiras linhas para debug
+                    first_lines = '\n'.join(best_text.split('\n')[:3])
+                    print(f"📝 Primeiras linhas: {first_lines}", file=sys.stderr)
                 else:
                     print(f"❌ Página {page_num+1}: Nenhum texto extraído", file=sys.stderr)
             
             doc.close()
             
-            if ocr_text.strip():
-                print(f"✅ OCR concluído. Texto total: {len(ocr_text)} caracteres", file=sys.stderr)
-                # Log das primeiras linhas para debug
-                first_lines = '\n'.join(ocr_text.split('\n')[:5])
-                print(f"📝 Primeiras linhas OCR: {first_lines}", file=sys.stderr)
+            if all_ocr_text.strip():
+                print(f"✅ OCR AVANÇADO concluído. Texto total: {len(all_ocr_text)} caracteres", file=sys.stderr)
+                # Salvar texto para debug se necessário
+                try:
+                    with open(f'debug_ocr_{os.path.basename(pdf_path)}.txt', 'w', encoding='utf-8') as f:
+                        f.write(all_ocr_text)
+                    print(f"💾 Debug OCR salvo: debug_ocr_{os.path.basename(pdf_path)}.txt", file=sys.stderr)
+                except:
+                    pass
             else:
-                print(f"❌ OCR não extraiu nenhum texto", file=sys.stderr)
+                print(f"❌ OCR AVANÇADO não extraiu nenhum texto", file=sys.stderr)
             
-            return ocr_text
+            return all_ocr_text
             
         except ImportError as e:
             print(f"❌ Erro: Dependências OCR não instaladas: {e}", file=sys.stderr)
             return ""
         except Exception as e:
-            print(f"❌ Erro durante OCR: {e}", file=sys.stderr)
+            print(f"❌ Erro durante OCR AVANÇADO: {e}", file=sys.stderr)
             
-            # FALLBACK melhorado: Usar pdfplumber se OCR falhar
-            if "tesseract" in str(e).lower() or "TesseractNotFoundError" in str(type(e).__name__):
-                print("🔄 FALLBACK: Tesseract não disponível, usando pdfplumber...", file=sys.stderr)
+            # FALLBACK: Usar OCR simples
+            print("🔄 FALLBACK: Tentando OCR simples...", file=sys.stderr)
+            return self._simple_ocr_fallback(pdf_path)
+    
+    def _preprocess_image_variants(self, img):
+        """Cria múltiplas variantes da imagem com diferentes pré-processamentos"""
+        from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+        
+        variants = []
+        
+        # Variante 1: Original em escala de cinza
+        if img.mode != 'L':
+            gray_img = img.convert('L')
+        else:
+            gray_img = img.copy()
+        variants.append(gray_img)
+        
+        # Variante 2: Alto contraste
+        high_contrast = gray_img.copy()
+        enhancer = ImageEnhance.Contrast(high_contrast)
+        high_contrast = enhancer.enhance(3.0)
+        variants.append(high_contrast)
+        
+        # Variante 3: Binarização (preto e branco puro)
+        binary_img = gray_img.copy()
+        # Converter para preto e branco usando threshold
+        threshold = 128
+        binary_img = binary_img.point(lambda x: 0 if x < threshold else 255, '1')
+        variants.append(binary_img)
+        
+        # Variante 4: Inverter cores (útil para textos em fundo escuro)
+        inverted_img = ImageOps.invert(gray_img)
+        variants.append(inverted_img)
+        
+        # Variante 5: Nitidez aumentada
+        sharp_img = gray_img.copy()
+        sharp_img = sharp_img.filter(ImageFilter.SHARPEN)
+        variants.append(sharp_img)
+        
+        # Variante 6: Denoising (redução de ruído)
+        smooth_img = gray_img.copy()
+        smooth_img = smooth_img.filter(ImageFilter.SMOOTH)
+        variants.append(smooth_img)
+        
+        return variants
+    
+    def _simple_ocr_fallback(self, pdf_path: str) -> str:
+        """OCR simples como fallback"""
+        try:
+            import pytesseract
+            import fitz
+            from PIL import Image
+            import io
+            
+            doc = fitz.open(pdf_path)
+            simple_text = ""
+            
+            for page_num in range(len(doc)):
+                page = doc.load_page(page_num)
+                pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                img_data = pix.tobytes("png")
+                img = Image.open(io.BytesIO(img_data))
+                
+                # OCR simples
                 try:
-                    import pdfplumber
-                    fallback_text = ""
-                    with pdfplumber.open(pdf_path) as pdf:
-                        for page in pdf.pages:
-                            page_text = page.extract_text()
-                            if page_text:
-                                fallback_text += page_text + "\n"
-                    
-                    if fallback_text.strip():
-                        print(f"✅ FALLBACK: {len(fallback_text)} caracteres extraídos com pdfplumber", file=sys.stderr)
-                        return fallback_text
-                    else:
-                        print("❌ FALLBACK: Nenhum texto extraído com pdfplumber", file=sys.stderr)
-                except Exception as fallback_error:
-                    print(f"❌ FALLBACK falhou: {fallback_error}", file=sys.stderr)
+                    text = pytesseract.image_to_string(img, lang='eng')
+                    if text.strip():
+                        simple_text += text + "\n"
+                except:
+                    continue
             
-            return ""
+            doc.close()
+            print(f"✅ FALLBACK simples: {len(simple_text)} caracteres", file=sys.stderr)
+            return simple_text
+            
+        except Exception as e:
+            print(f"❌ FALLBACK simples falhou: {e}", file=sys.stderr)
+            
+            # FALLBACK FINAL: pdfplumber
+            return self._pdfplumber_fallback(pdf_path)
+    
+    def _pdfplumber_fallback(self, pdf_path: str) -> str:
+        """Último fallback usando pdfplumber"""
+        try:
+            import pdfplumber
+            fallback_text = ""
+            
+            with pdfplumber.open(pdf_path) as pdf:
+                for page in pdf.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        fallback_text += page_text + "\n"
+            
+            if fallback_text.strip():
+                print(f"✅ FALLBACK pdfplumber: {len(fallback_text)} caracteres", file=sys.stderr)
+                return fallback_text
+            else:
+                print("❌ FALLBACK pdfplumber: Nenhum texto extraído", file=sys.stderr)
+                
+        except Exception as fallback_error:
+            print(f"❌ FALLBACK pdfplumber falhou: {fallback_error}", file=sys.stderr)
+        
+        return ""
     
     def parse_daily_entries(self, text: str) -> List[Dict]:
         """Extrai e analisa as entradas diárias do ponto - SOLUÇÃO UNIVERSAL"""
