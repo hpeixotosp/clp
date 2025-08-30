@@ -109,7 +109,7 @@ const FileUploadBox = ({ files, onUpload, onRemove, disabled, id }: FileUploadBo
             {...commonDragProps}
             onClick={() => inputRef.current?.click()}
             className={`flex flex-col items-center justify-center w-full h-32 px-4 text-center border-2 border-dashed rounded-lg cursor-pointer transition-colors
-            ${isDragging ? 'border-primary bg-primary-foreground' : 'border-border hover:border-primary/50'}`}
+            ${isDragging ? 'border-primary bg-primary-foreground' : 'border hover:border-primary/50'}`}
         >
             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                 <FileUp className="w-8 h-8 mb-4 text-muted-foreground" />
