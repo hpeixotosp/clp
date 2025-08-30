@@ -84,7 +84,7 @@ const FileUploadBox = ({ files, onUpload, onRemove, disabled, id }: FileUploadBo
             <div className="space-y-2">
                 <div className="space-y-2">
                     {files.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between p-2.5 border rounded-lg bg-background">
+                        <div key={index} className="flex items-center justify-between p-2.5 border rounded-lg bg-white">
                             <div className="flex items-center gap-3">
                                 <FileText className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
                                 <span className="text-sm font-medium truncate">{file.name}</span>
