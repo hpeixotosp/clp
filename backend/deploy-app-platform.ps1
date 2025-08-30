@@ -2,12 +2,14 @@
 # Este script prepara o ambiente para evitar erros de build
 
 Write-Host "🚀 Preparando deploy para DigitalOcean App Platform..." -ForegroundColor Green
+Write-Host "⚠️  ATENÇÃO: Esta versão ultra-minimalista remove pandas e pdfplumber" -ForegroundColor Yellow
+Write-Host "📄 Funcionalidades de processamento de PDF estarão temporariamente desabilitadas" -ForegroundColor Yellow
 
 # Backup do requirements.txt original
 Copy-Item "requirements.txt" "requirements-full.txt" -Force
 
-# Usar requirements mínimos para evitar problemas de compilação
-Write-Host "📦 Usando dependências mínimas para deploy..." -ForegroundColor Yellow
+# Usar requirements ultra-mínimos para evitar erro de build
+Write-Host "📦 Usando dependências ultra-mínimas para deploy..." -ForegroundColor Yellow
 Copy-Item "requirements-minimal.txt" "requirements.txt" -Force
 
 # Verificar se os arquivos de configuração existem

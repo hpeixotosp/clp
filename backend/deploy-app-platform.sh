@@ -4,12 +4,14 @@
 # Este script prepara o ambiente para evitar erros de build
 
 echo "🚀 Preparando deploy para DigitalOcean App Platform..."
+echo "⚠️  ATENÇÃO: Esta versão ultra-minimalista remove pandas e pdfplumber"
+echo "📋 Funcionalidades de processamento de PDF estarão temporariamente desabilitadas"
 
 # Backup do requirements.txt original
 cp requirements.txt requirements-full.txt
 
-# Usar requirements mínimos para evitar problemas de compilação
-echo "📦 Usando dependências mínimas para deploy..."
+# Usar dependências ultra-mínimas para evitar erro de build
+echo "📦 Usando dependências ultra-mínimas para deploy..."
 cp requirements-minimal.txt requirements.txt
 
 # Verificar se os arquivos de configuração existem

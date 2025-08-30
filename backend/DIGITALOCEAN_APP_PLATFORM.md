@@ -9,22 +9,26 @@ ninja: build stopped: subcommand failed.
 error: metadata-generation-failed
 ```
 
-## Solução Implementada
+## Soluções Implementadas
 
-### 1. Arquivos Criados
+### 1. Configuração de Versão do Python
+- **Arquivo**: `runtime.txt` - Especifica Python 3.11.10
+- **Arquivo**: `.python-version` - Garante compatibilidade com buildpack
 
-- **`runtime.txt`**: Especifica Python 3.11.10 (versão compatível)
-- **`.python-version`**: Arquivo adicional para garantir a versão do Python
-- **`requirements-minimal.txt`**: Dependências essenciais sem pandas
-- **`.do/app.yaml`**: Configuração específica do App Platform
-- **`deploy-app-platform.sh`**: Script de deploy para Linux/Mac
-- **`deploy-app-platform.ps1`**: Script de deploy para Windows
+### 2. Dependências Ultra-Mínimas
+- **Arquivo**: `requirements-minimal.txt` - Versão ultra-reduzida (SEM pandas/pdfplumber)
+- **Estratégia**: Remoção completa de dependências problemáticas
+- **Foco**: Apenas funcionalidades essenciais da API
 
-### 2. Alterações Realizadas
+### 3. Configuração do App Platform
+- **Arquivo**: `.do/app.yaml` - Configuração completa do serviço
+- **Scripts**: `deploy-app-platform.sh` e `deploy-app-platform.ps1`
 
-- **Downgrade do pandas**: De 2.1.4 para 2.0.3 (versão mais estável)
+### 4. Alterações Realizadas
+
+- **Remoção completa**: pandas, pdfplumber, pytesseract e dependências pesadas
 - **Versão do Python**: Fixada em 3.11.10 (compatível com buildpack v4.289.5)
-- **Dependências mínimas**: Criado arquivo com apenas dependências essenciais
+- **Dependências ultra-mínimas**: Apenas FastAPI, uvicorn e MySQL
 
 ## Como Usar
 
@@ -74,16 +78,22 @@ O arquivo `.do/app.yaml` está configurado com:
 
 ## Funcionalidades Afetadas
 
-Com as **dependências mínimas**, as seguintes funcionalidades podem ser limitadas:
+⚠️ **CRÍTICO**: Com as dependências ultra-mínimas, várias funcionalidades estarão **DESABILITADAS**:
 
-- ❌ Processamento avançado de planilhas (pandas)
-- ❌ OCR de imagens (pytesseract)
-- ❌ Conversão de PDF para imagem (pdf2image)
-- ❌ Análise com Google Generative AI
-- ✅ API básica (FastAPI)
-- ✅ Banco de dados MySQL
-- ✅ Processamento básico de PDF (pdfplumber)
-- ✅ Autenticação e segurança
+### ❌ Funcionalidades Desabilitadas
+- **Processamento de PDFs**: pdfplumber removido
+- **Análise de dados**: pandas removido completamente
+- **OCR e processamento de imagens**: pytesseract não incluído
+- **Processamento de planilhas**: openpyxl não incluído
+- **Análise de tabelas**: tabula-py não incluído
+- **IA/ML**: google-generativeai não incluído
+
+### ✅ Funcionalidades Mantidas
+- **API FastAPI**: Endpoints básicos funcionando
+- **Banco de dados**: Conexão MySQL operacional
+- **Autenticação**: Sistema de login/segurança
+- **Logging**: Sistema de logs básico
+- **CRUD básico**: Operações de colaboradores, etc.
 
 ## Restaurar Funcionalidades Completas
 
