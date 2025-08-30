@@ -1,60 +1,70 @@
-# TRT21 - CLP Manager
+# CLP Manager - Sistema de Gestão de Contracheques e Pontos Eletrônicos
 
-Este é um sistema de gestão para o TRT21 - CLP para o registro, acompanhamento e categorização de processos e demandas.
+## 🏗️ Arquitetura
 
-## Tecnologias
+Este projeto está organizado em duas partes principais:
 
-- **Front-end:** Next.js 14 (React)
-- **UI:** shadcn/ui
-- **Back-end:** Next.js API Routes
-- **Banco de Dados:** SQLite
+### Frontend (Next.js)
+- **Localização**: `/frontend/`
+- **Deploy**: Vercel
+- **URL**: [Frontend URL]
 
-## Começando
+### Backend (Python/FastAPI)
+- **Localização**: `/backend/`
+- **Deploy**: DigitalOcean
+- **URL**: http://143.110.196.243
 
-Siga as instruções abaixo para configurar e executar o projeto em seu ambiente local.
+## 🚀 Deploy
 
-### Pré-requisitos
+### Frontend (Vercel)
+1. Conecte o repositório ao Vercel
+2. Configure as variáveis de ambiente:
+   - `NEXT_PUBLIC_API_URL`: http://143.110.196.243
+   - `NEXT_PUBLIC_BACKEND_URL`: http://143.110.196.243
+   - `NEXT_PUBLIC_ENVIRONMENT`: production
 
-- Node.js (versão 18 ou superior)
-- npm
+### Backend (DigitalOcean)
+1. O backend já está configurado e rodando
+2. Serviços ativos:
+   - Nginx (porta 80)
+   - FastAPI (porta 8000)
+   - MySQL
+   - Supervisor
 
-### Instalação
+## 📁 Estrutura do Projeto
 
-1.  Clone o repositório para a sua máquina local.
-2.  Navegue até o diretório do projeto:
-    ```bash
-    cd trt21-clp-manager
-    ```
-3.  Instale as dependências do projeto:
-    ```bash
-    npm install
-    ```
-
-### Configuração do Banco de Dados
-
-Antes de iniciar a aplicação, você precisa inicializar o banco de dados SQLite. Isso criará o arquivo `trt21-clp.db` na raiz do projeto com o esquema de tabelas necessário.
-
-Execute o seguinte comando:
-
-```bash
-npm run db:init
+```
+clp/
+├── frontend/          # Next.js App
+│   ├── src/          # Código fonte
+│   ├── package.json  # Dependências
+│   └── vercel.json   # Config Vercel
+├── backend/           # Python/FastAPI
+│   ├── main.py       # Aplicação principal
+│   ├── requirements.txt
+│   └── database/     # Modelos e conexões
+└── README.md         # Este arquivo
 ```
 
-### Executando o Servidor de Desenvolvimento
+## 🔧 Desenvolvimento Local
 
-Após a instalação das dependências e a inicialização do banco de dados, você pode iniciar o servidor de desenvolvimento.
-
+### Frontend
 ```bash
+cd frontend
+npm install
 npm run dev
 ```
 
-Abra [http://localhost:3000](http://localhost:3000) no seu navegador para ver a aplicação em funcionamento.
+### Backend
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
 
-## Estrutura do Projeto
+## 📊 Status do Deploy
 
--   `/src/app/api`: Contém as rotas de API do back-end.
--   `/src/app/(pages)`: Contém as páginas da aplicação.
--   `/src/components`: Contém os componentes React reutilizáveis.
--   `/src/lib`: Contém os utilitários, como a conexão com o banco de dados (`db.ts`) e dados estáticos (`data.ts`).
--   `/public`: Contém os arquivos estáticos, como os CSVs de dados.
--   `/trt21-clp.db`: O arquivo do banco de dados SQLite.
+- ✅ **Backend**: Funcionando no DigitalOcean
+- 🔄 **Frontend**: Pronto para deploy no Vercel
+- ✅ **Banco de Dados**: MySQL configurado e funcionando
+- ✅ **API**: Endpoints funcionando em http://143.110.196.243

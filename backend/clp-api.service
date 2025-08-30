@@ -1,0 +1,32 @@
+[Unit]
+Description=CLP Manager API
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=exec
+User=clp_user
+Group=clp_user
+WorkingDirectory=/opt/clp-manager/backend-api
+Environment=PATH=/opt/clp-manager/venv/bin
+ExecStart=/opt/clp-manager/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=clp-api
+
+# Configurações de segurança
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/clp-manager/backend-api/logs /opt/clp-manager/backend-api/uploads /opt/clp-manager/backend-api/temp
+
+# Limites de recursos
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target
