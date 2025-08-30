@@ -254,11 +254,11 @@ export default function DemandasPage() {
   };
 
   // Calcular estatísticas
-  const totalDemandas = demandas.length;
-  const pendentes = demandas.filter(d => d.situacao === "pendente").length;
-  const emAndamento = demandas.filter(d => d.situacao === "emandamento").length;
-  const concluidas = demandas.filter(d => d.situacao === "concluida").length;
-  const altaPrioridade = demandas.filter(d => d.prioridade === "alta").length;
+  const totalDemandas = demandas?.length || 0;
+  const pendentes = demandas?.filter(d => d.situacao === "pendente").length || 0;
+  const emAndamento = demandas?.filter(d => d.situacao === "emandamento").length || 0;
+  const concluidas = demandas?.filter(d => d.situacao === "concluida").length || 0;
+  const altaPrioridade = demandas?.filter(d => d.prioridade === "alta").length || 0;
 
   return (
     <TooltipProvider>
@@ -767,7 +767,7 @@ export default function DemandasPage() {
 
         {/* Lista de Demandas em formato de Cards */}
         <div className="space-y-4">
-          {demandas.length > 0 ? (
+          {demandas && demandas.length > 0 ? (
             demandas.map((demanda) => (
               <Card key={demanda.id}>
                 <CardHeader>
@@ -956,7 +956,7 @@ export default function DemandasPage() {
           ) : (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">
-                <p>{demandas.length === 0 ? "Nenhuma demanda cadastrada ainda." : "Nenhuma demanda encontrada com os filtros aplicados."}</p>
+                <p>{!demandas || demandas.length === 0 ? "Nenhuma demanda cadastrada ainda." : "Nenhuma demanda encontrada com os filtros aplicados."}</p>
               </CardContent>
             </Card>
           )}

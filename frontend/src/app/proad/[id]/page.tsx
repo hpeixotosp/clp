@@ -36,10 +36,10 @@ export default function ProadDetailPage() {
   useEffect(() => {
     if (!id) return;
     // Carregar PROADs se ainda não foram carregados
-    if (proads.length === 0) {
+    if (!proads || proads.length === 0) {
       loadProads();
     }
-  }, [id, proads.length, loadProads]);
+  }, [id, proads?.length, loadProads]);
 
   const handleAddAndamento = async () => {
     if (!newAndamento.trim() || !id) return;

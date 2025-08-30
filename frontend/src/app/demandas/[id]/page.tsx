@@ -41,10 +41,10 @@ export default function DemandaDetailPage() {
   const andamentos = demanda?.andamentos || [];
 
   useEffect(() => {
-    if (demandas.length === 0) {
+    if (!demandas || demandas.length === 0) {
       loadDemandas();
     }
-  }, [demandas.length, loadDemandas]);
+  }, [demandas?.length, loadDemandas]);
 
   const handleAddAndamento = async () => {
     if (!novoAndamento.trim()) return;

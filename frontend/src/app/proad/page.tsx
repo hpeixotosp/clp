@@ -94,6 +94,7 @@ export default function PROADPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showCustomResponsavel, setShowCustomResponsavel] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
 
   const [formData, setFormData] = useState<PROAD>({
     numero: "", 
@@ -265,7 +266,7 @@ export default function PROADPage() {
     }
   };
 
-  const filteredProads = proads.filter(proad => {
+  const filteredProads = proads?.filter(proad => {
     const matchesSearch = proad.numero.includes(searchTerm) || 
                          proad.ano.includes(searchTerm) ||
                          (proad.assunto && proad.assunto.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -275,13 +276,13 @@ export default function PROADPage() {
     const matchesSituacao = selectedSituacao === "all" || proad.situacao === selectedSituacao;
     
     return matchesSearch && matchesSetor && matchesPrioridade && matchesSituacao;
-  });
+  }) || [];
 
-  const totalProads = proads.length;
-  const altaPrioridade = proads.filter(p => p.prioridade === "alta").length;
-  const mediaPrioridade = proads.filter(p => p.prioridade === "media").length;
-  const baixaPrioridade = proads.filter(p => p.prioridade === "baixa").length;
-  const ativos = proads.filter(p => p.situacao === "ativo").length;
+  const totalProads = proads?.length || 0;
+  const altaPrioridade = proads?.filter(p => p.prioridade === "alta").length || 0;
+  const mediaPrioridade = proads?.filter(p => p.prioridade === "media").length || 0;
+  const baixaPrioridade = proads?.filter(p => p.prioridade === "baixa").length || 0;
+  const ativos = proads?.filter(p => p.situacao === "ativo").length || 0;
 
   return (
     <DashboardLayout>
@@ -957,7 +958,7 @@ export default function PROADPage() {
             ) : (
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">
-                  <p>{proads.length === 0 ? "Nenhum PROAD cadastrado ainda." : "Nenhum PROAD encontrado com os filtros aplicados."}</p>
+                  <p>{!proads || proads.length === 0 ? "Nenhum PROAD cadastrado ainda." : "Nenhum PROAD encontrado com os filtros aplicados."}</p>
                 </CardContent>
               </Card>
             )}
