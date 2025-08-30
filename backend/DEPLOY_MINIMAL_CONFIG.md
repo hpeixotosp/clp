@@ -158,12 +158,35 @@ async def startup_event():
     logger.info(f"🚀 Aplicação iniciada em modo {'MINIMAL' if os.getenv('MINIMAL_MODE') else 'COMPLETO'}")
 ```
 
-## Próximos Passos
+## 🚀 Próximos Passos
 
-1. **Deploy Inicial**: Use a versão minimal para fazer o deploy funcionar
-2. **Teste Básico**: Verifique se os endpoints essenciais funcionam
-3. **Upgrade Gradual**: Adicione dependências uma por vez
-4. **Monitoramento**: Acompanhe logs de erro e performance
+### ✅ CORREÇÃO APLICADA (Commit 11586d5)
+O arquivo `app.yaml` foi corrigido para forçar o uso do `requirements-minimal.txt` durante o build:
+```yaml
+build_command: cp requirements-minimal.txt requirements.txt && echo "Using minimal requirements for build"
+```
+
+### 📋 Instruções para Deploy
+
+1. **✅ Correção já aplicada** - O app.yaml agora força o uso das dependências mínimas
+
+2. **Configurar Variáveis de Ambiente no DigitalOcean**:
+   - `DATABASE_URL`
+   - `MYSQL_HOST`
+   - `MYSQL_USER` 
+   - `MYSQL_PASSWORD`
+   - `MYSQL_DATABASE`
+   - `GOOGLE_API_KEY`
+
+3. **Iniciar Novo Deploy**:
+   - ✅ Push já realizado (commit 11586d5)
+   - Aguardar build automático no DigitalOcean
+   - Monitorar logs de deploy
+
+4. **Monitoramento**:
+   - Verificar se a API está respondendo
+   - Testar endpoints básicos
+   - Monitorar logs de erro
 
 ## Alternativas
 
