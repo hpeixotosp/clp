@@ -9,7 +9,7 @@ pymysql==1.1.0
 
 # Processamento de PDFs e documentos
 pdfplumber==0.10.3
-pandas==2.1.4
+pandas==2.0.3
 PyMuPDF==1.23.8
 tabula-py==2.8.2
 google-generativeai==0.3.2
