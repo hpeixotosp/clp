@@ -4,6 +4,12 @@
   "framework": "nextjs",
   "installCommand": "npm install",
   "devCommand": "npm run dev",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ],
   "env": {
     "NEXT_PUBLIC_API_URL": "http://143.110.196.243",
     "NEXT_PUBLIC_BACKEND_URL": "http://143.110.196.243",
